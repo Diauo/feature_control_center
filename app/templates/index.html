@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能管理面板</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="[| url_for('static', filename='css/index.css') |]">
+</head>
+
+<body>
+    <div id="app">
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="client-selector">
+                    <select v-model="selectedClient">
+                        <option value="">所有客户</option>
+                        <option v-for="client in clients" :key="client.id" :value="client.id">
+                            {{ client.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="nav-links">
+                    <a href="#" @click="currentPage = 'home'"
+                        :class="['nav-link', currentPage === 'home' ? 'active' : '']">功能列表</a>
+                    <a href="#" @click="currentPage = 'cron'"
+                        :class="['nav-link', currentPage === 'cron' ? 'active' : '']">定时任务</a>
+                    <a href="#" @click="currentPage = 'logs'"
+                        :class="['nav-link', currentPage === 'logs' ? 'active' : '']">日志查询</a>
+                    <a href="#" @click="currentPage = 'config'"
+                        :class="['nav-link', currentPage === 'config' ? 'active' : '']">系统配置</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="content">
+            <!-- 首页 -->
+            <div v-if="currentPage === 'home'">
+                <h2>功能列表</h2>
+                <div class="features-grid">
+                    <div class="sidebar">
+                        <div class="sidebar-header">平台分类</div>
+                        <div class="category-title" @click="selectCategory()">所有功能</div>
+                        <div v-for="category in categories" :key="category.id" class="category">
+                            <div class="category-title" @click="toggleCategory(category)">
+                                {{ category.name }}
+                                <span>{{ category.expanded ? '▼' : '▶' }}</span>
+                            </div>
+                            <div class="category-content" v-if="category.expanded">
+                                <div v-for="item in category.items" :key="item.id"
+                                    :class="['category-item', selectedCategory === item.id ? 'active' : '']"
+                                    @click="selectCategory(item.id)">
+                                    {{ item.name }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
+                        @click="openFeatureWindow(feature)">
+                        <h3>{{ feature.name }}</h3>
+                        <p>{{ feature.description }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 定时任务页面 -->
+            <div v-if="currentPage === 'cron'">
+                <h2>定时任务配置</h2>
+                <div class="cron-editor">
+                    <input type="text" v-model="cronExpression" placeholder="Cron表达式">
+                    <button class="btn-primary" @click="saveCronJob">保存</button>
+                </div>
+            </div>
+
+            <!-- 日志查询页面 -->
+            <div v-if="currentPage === 'logs'">
+                <h2>日志查询</h2>
+                <div class="logs">
+                    <div v-for="log in logs" :key="log.id" class="log-entry">
+                        {{ log.message }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能运行窗口 -->
+        <div class="feature-window" v-if="activeFeature">
+            <div class="feature-window-header">
+                <h3>{{ activeFeature.name }}</h3>
+                <button class="close-button" @click="closeFeatureWindow">×</button>
+            </div>
+            <div class="feature-window-content">
+                <div class="feature-description">
+                    {{ activeFeature.description }}
+                </div>
+                <div class="console-output">
+                    <div v-for="(log, index) in consoleLogs" :key="index" :class="['console-line', log.type]">
+                        {{ log.message }}
+                    </div>
+                </div>
+            </div>
+            <div class="feature-window-footer">
+                <button class="btn-secondary" @click="closeFeatureWindow">关闭</button>
+                <button class="btn-danger" v-if="isRunning" @click="stopFeature">终止运行</button>
+                <button class="btn-primary" v-else @click="runFeature">运行</button>
+            </div>
+        </div>
+
+        <!-- 通知区域 -->
+        <div class="notifications-container">
+            <div v-for="notification in notifications" :key="notification.id" class="notification"
+                @click="removeNotification(notification.id)">
+                {{ notification.message }}
+            </div>
+        </div>
+    </div>
+    <script src="[| url_for('static', filename='js/api/feature_api.js') |]"></script>
+    <script src="[| url_for('static', filename='js/index.js') |]"></script>
+</body>
