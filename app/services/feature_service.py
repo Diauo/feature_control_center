@@ -34,16 +34,16 @@ def get_feature_by_customer_id(customer_id):
 def get_feature_by_category_tags_id(category_id = None, tags = None):
     if not category_id and not tags:
         return False, "没有有效参数分类ID[category_id]和标签ID[tags]", []
-    condition = "WHERE "
+    condition_list = []
+    condition = ""
     tags_string = ""
     if category_id:
-        condition += " CG.ID = :category_id AND"
+        condition_list.append("CG.ID = :category_id")
     if tags:
         tags_string = ",".join(tags)
-        condition += " TG.ID in (:tags)"
-    # 移除多余字符
-    if condition.endswith("AND"):
-        condition = condition[:-3]
+        condition_list.append("TG.ID in (:tags)")
+    if len(condition_list)!=0:
+        condition = "WHERE " + (" AND ".join(condition_list))
     per_sql = f'''
                SELECT FT.ID, FT.NAME, FT.DESCRIPTION, FT.CUSTOMER_ID,
                     GROUP_CONCAT(CG.NAME, ',') category_tags,
