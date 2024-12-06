@@ -6,12 +6,10 @@ class Base_model(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     def save(self):
-        """保存当前对象到数据库"""
         db.session.add(self)
         db.session.commit()
 
     def delete(self):
-        """从数据库中删除当前对象"""
         db.session.delete(self)
         db.session.commit()
 
@@ -35,7 +33,12 @@ class Category(Base_model):
     code = db.Column(db.String(64), unique=True, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
 
-    
+class Tag(Base_model):
+    __tablename__ = 'base_tag'
+
+    name = db.Column(db.String(64), unique=True, nullable=False)
+    code = db.Column(db.String(64), unique=True, nullable=False)
+
 class Customer(Base_model):
     __tablename__ = 'base_customer'
 
