@@ -19,7 +19,9 @@ class Base_model(db.Model):
 
 class Feature(Base_model):
     __tablename__ = 'base_feature'
-
+    __info__ = ''' 功能
+        一段轻量化可移植的代码逻辑
+    '''
     name = db.Column(db.String(64), unique=False, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
     customer_id = db.Column(db.Integer, unique=False, nullable=False)
@@ -28,20 +30,31 @@ class Feature(Base_model):
 
 class Category(Base_model):
     __tablename__ = 'base_category'
-
+    __info__ = ''' 分类
+        分类决定功能页面展示的主要分类，下面可以设置一个或多个标签用于过滤；
+        分类存在上下级关系，可以定义复杂的嵌套以及
+    '''
     name = db.Column(db.String(64), unique=True, nullable=False)
+    parent_id = db.Column(db.Integer, unique=False, nullable=True)
+    customer_id = db.Column(db.Integer, unique=False, nullable=True)
     code = db.Column(db.String(64), unique=True, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
+    tags = ""
 
+# 一个功能有多个Tag，多个分类也可以被定义到
 class Tag(Base_model):
     __tablename__ = 'base_tag'
-
+    __info__ = ''' 标签
+        标签用于标识功能，来实现过滤和搜索等功能的实现
+    '''
     name = db.Column(db.String(64), unique=True, nullable=False)
     code = db.Column(db.String(64), unique=True, nullable=False)
 
 class Customer(Base_model):
     __tablename__ = 'base_customer'
-
+    __info__ = ''' 客户
+        除过滤功能外，计划用于报告功能统计业务数据
+        '''
     name = db.Column(db.String(64), unique=True, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
 
