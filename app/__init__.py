@@ -1,5 +1,5 @@
 from flask import Flask
-from app.middlewares import log_request, add_custom_header
+from app.middlewares import log_request, global_result_format
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -24,7 +24,7 @@ def create_app(config_class='app.config.Config'):
 
     # 注册中间件    
     log_request(app)
-    add_custom_header(app)
+    global_result_format(app)
 
     # 初始化数据库
     db.init_app(app)
