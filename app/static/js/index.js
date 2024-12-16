@@ -1,5 +1,5 @@
 
-const { createApp, ref, computed } = Vue
+const { createApp, ref, computed, onMounted } = Vue
 
 createApp({
     setup() {
@@ -18,89 +18,38 @@ createApp({
             { id: 'client-b', name: 'ozon公司' },
             { id: 'client-c', name: 'ME3公司' },
         ])
+        
+        // 加载完成后获取后端数据
+        const features = ref([]);
+
+        onMounted(async()=>{
+            debugger;
+            const response = await window.api.get_all_feature();
+            features.value = response.data.data;
+        })
 
         // 示例分类数据
         const categories = ref([
             {
-                id: 1,
+                order_id: 1,
                 name: 'Shopify平台',
+                code: 'shopify',
                 expanded: true,
-                items: [
-                    { id: 'shopify-order', name: '订单管理' },
-                    { id: 'shopify-product', name: '商品管理' },
-                ]
             },
             {
-                id: 2,
+                order_id: 2,
                 name: 'OZON平台',
+                code: 'ozon',
                 expanded: false,
-                items: [
-                    { id: 'ozon-inventory', name: '库存同步' },
-                    { id: 'ozon-price', name: '价格更新' },
-                ]
             },
             {
-                id: 3,
+                order_id: 3,
                 name: 'ERP系统',
+                code: 'erp',
                 expanded: false,
-                items: [
-                    { id: 'erp-sync', name: '数据同步' },
-                    { id: 'erp-report', name: '报表生成' },
-                ]
             }
         ])
 
-        const features = ref([
-            {
-                id: 1,
-                name: '订单同步',
-                description: '从Shopify平台同步最新订单到ME3系统',
-                category: 'shopify-order',
-                clientId: 'client-a'
-            },
-            {
-                id: 2,
-                name: '库存同步',
-                description: '将ME3系统的库存同步到shopify',
-                category: 'shopify-product',
-                clientId: 'client-a'
-            },
-            {
-                id: 3,
-                name: '商品更新',
-                description: '从ME3系统获取数据更新Shopify平台商品信息',
-                category: 'shopify-product',
-                clientId: 'client-a'
-            },
-            {
-                id: 4,
-                name: 'OZON库存同步',
-                description: '将ME3系统的库存同步到OZON',
-                category: 'ozon-inventory',
-                clientId: 'client-b'
-            },
-            {
-                id: 4,
-                name: 'OZON价格更新',
-                description: '批量更新OZON平台商品价格',
-                category: 'ozon-price',
-                clientId: 'client-b'
-            },
-            {
-                id: 5,
-                name: 'ERP数据同步',
-                description: '同步ERP系统数据',
-                category: 'erp-sync',
-                clientId: 'client-c'
-            },
-            {
-                id: 6,
-                name: '月度报表',
-                description: '生成系统月度运营报表',
-                category: 'erp-report',
-                clientId: 'client-c'
-            }
-        ]);
 
         const logs = ref([
             { id: 1, message: '系统启动 - 2024-03-12 10:00:00' },
@@ -108,13 +57,6 @@ createApp({
             { id: 3, message: '定时任务更新 - 2024-03-12 10:10:00' },
         ])
 
-        // // 根据选择的类别过滤功能
-        // const filteredFeatures = computed(() => {
-        //     if (!selectedCategory.value) {
-        //         return features.value
-        //     }
-        //     return features.value.filter(feature => feature.category === selectedCategory.value)
-        // })
 
         // 根据选择的客户筛选分类
         const filteredCategories = computed(() => {
@@ -122,22 +64,24 @@ createApp({
                 return categories.value
             }
             return categories.value.filter(category =>
-                category.clientId === selectedClient.value
+                category.customer_id === selectedClient.value
             )
         })
 
         // 根据选择的客户和分类筛选功能
         const filteredFeatures = computed(() => {
+            debugger;
             let result = features.value
 
             if (selectedClient.value) {
                 result = result.filter(feature =>
-                    feature.clientId === selectedClient.value
+                    feature.customer_id === selectedClient.value
                 )
             }
+            // 根据标签分类
             if (selectedCategory.value) {
                 result = result.filter(feature =>
-                    feature.category === selectedCategory.value
+                    feature.category.split(",").includes(selectedCategory.value)
                 )
             }
             return result
@@ -156,8 +100,8 @@ createApp({
         }
 
         // 选择分类
-        const selectCategory = (categoryId) => {
-            selectedCategory.value = categoryId
+        const selectCategory = (categoryCode) => {
+            selectedCategory.value = categoryCode
         }
 
         // 打开功能窗口

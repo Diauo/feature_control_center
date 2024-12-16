@@ -43,7 +43,7 @@
                     <div class="sidebar">
                         <div class="sidebar-header">平台分类</div>
                         <div class="category-title" @click="selectCategory()">所有功能</div>
-                        <div v-for="category in categories" :key="category.id" class="category">
+                        <div v-for="category in categories" :key="category.order_id" class="category">
                             <div class="category-title" @click="toggleCategory(category)">
                                 {{ category.name }}
                                 <span>{{ category.expanded ? '▼' : '▶' }}</span>
@@ -51,7 +51,7 @@
                             <div class="category-content" v-if="category.expanded">
                                 <div v-for="item in category.items" :key="item.id"
                                     :class="['category-item', selectedCategory === item.id ? 'active' : '']"
-                                    @click="selectCategory(item.id)">
+                                    @click="selectCategory(item.code)">
                                     {{ item.name }}
                                 </div>
                             </div>
