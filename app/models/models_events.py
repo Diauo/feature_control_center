@@ -1,6 +1,6 @@
 from datetime import datetime 
 from sqlalchemy import event 
-from .base_models import BaseModel
+from .base_models import Base_model
 
 
 def before_insert(mapper, connect, target):
@@ -12,5 +12,5 @@ def before_update(mapper, connect, target):
     # 更新前设置更新时间
     target.updated_date = datetime.now
 
-event.listen(BaseModel, 'before_insert', before_insert) 
-event.listen(BaseModel, 'before_update', before_update)
+event.listen(Base_model, 'before_insert', before_insert) 
+event.listen(Base_model, 'before_update', before_update)

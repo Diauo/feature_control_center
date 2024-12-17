@@ -1,6 +1,5 @@
 from app import db
 from datetime import datetime
-from . import models_events
 
 class Base_model(db.Model):
     __tablename__ = "base"
@@ -62,3 +61,6 @@ class Customer(Base_model):
     name = db.Column(db.String(64), unique=True, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
 
+
+# 最后引入模型事件
+from . import models_events
