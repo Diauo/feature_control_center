@@ -43,6 +43,7 @@ class Category(Base_model):
     parent_id = db.Column(db.Integer, unique=False, nullable=True)
     customer_id = db.Column(db.Integer, unique=False, nullable=True)
     description = db.Column(db.String(256), unique=False, nullable=True)
+    order_id = db.Column(db.Integer, unique=False, nullable = True,autoincrement=True)
     tags = ""
 
 # 一个功能有多个Tag，多个分类也可以被定义到

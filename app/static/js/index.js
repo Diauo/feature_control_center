@@ -1,5 +1,7 @@
 
 const { createApp, ref, computed, onMounted } = Vue
+import api from './api/api.js';
+import SidebarMenu from './defineComponent.js';
 
 createApp({
     setup() {
@@ -12,44 +14,23 @@ createApp({
         const consoleLogs = ref([])
         const selectedCategory = ref(null)
 
-        const selectedClient = ref('')
-        const clients = ref([
-            { id: 'client-a', name: 'shopify公司' },
-            { id: 'client-b', name: 'ozon公司' },
-            { id: 'client-c', name: 'ME3公司' },
-        ])
-        
+        const currentCustomer = ref('')
+        const customers = ref([])
+        const categories = ref([])
         // 加载完成后获取后端数据
         const features = ref([]);
 
-        onMounted(async()=>{
-            debugger;
-            const response = await window.api.get_all_feature();
+        onMounted(async () => {
+            // 获取所有功能
+            let response = await api.feature.get_all_feature();
             features.value = response.data.data;
+            // 获取所有客户
+            response = await api.customer.get_all_customer();
+            customers.value = response.data.data;
+            // 获取所有分类
+            response = await api.category.get_all_category();
+            categories.value = response.data.data;
         })
-
-        // 示例分类数据
-        const categories = ref([
-            {
-                order_id: 1,
-                name: 'Shopify平台',
-                code: 'shopify',
-                expanded: true,
-            },
-            {
-                order_id: 2,
-                name: 'OZON平台',
-                code: 'ozon',
-                expanded: false,
-            },
-            {
-                order_id: 3,
-                name: 'ERP系统',
-                code: 'erp',
-                expanded: false,
-            }
-        ])
-
 
         const logs = ref([
             { id: 1, message: '系统启动 - 2024-03-12 10:00:00' },
@@ -60,22 +41,21 @@ createApp({
 
         // 根据选择的客户筛选分类
         const filteredCategories = computed(() => {
-            if (!selectedClient.value) {
+            if (!currentCustomer.value) {
                 return categories.value
             }
             return categories.value.filter(category =>
-                category.customer_id === selectedClient.value
+                category.customer_id === currentCustomer.value
             )
         })
 
         // 根据选择的客户和分类筛选功能
         const filteredFeatures = computed(() => {
-            debugger;
             let result = features.value
 
-            if (selectedClient.value) {
+            if (currentCustomer.value) {
                 result = result.filter(feature =>
-                    feature.customer_id === selectedClient.value
+                    feature.customer_id === currentCustomer.value
                 )
             }
             // 根据标签分类
@@ -89,14 +69,31 @@ createApp({
 
         // 获取当前客户名称
         const getCurrentClientName = computed(() => {
-            if (!selectedClient.value) return ''
-            const client = clients.value.find(c => c.id === selectedClient.value)
+            if (!currentCustomer.value) return ''
+            const client = customers.value.find(c => c.id === currentCustomer.value)
             return client ? client.name : ''
         })
 
         // 切换分类展开/收起
         const toggleCategory = (category) => {
-            category.expanded = !category.expanded
+            debugger;
+            // 如果有子菜单，递归地折叠所有子菜单
+            const collapseChildren = (cat) => {
+                if (cat.child && cat.child.length > 0) {
+                    cat.child.forEach(child => {
+                        child.expanded = false;  // 折叠子菜单
+                        collapseChildren(child); // 递归折叠
+                    });
+                }
+            };
+
+            // 切换当前类别的折叠状态
+            category.expanded = !category.expanded;
+
+            // 如果折叠了当前菜单，折叠它的所有子菜单
+            if (!category.expanded) {
+                collapseChildren(category);
+            }
         }
 
         // 选择分类
@@ -238,8 +235,8 @@ createApp({
             categories,
             selectedCategory,
             filteredFeatures,
-            clients,
-            selectedClient,
+            customers,
+            currentCustomer,
             filteredCategories,
             getCurrentClientName,
             toggleCategory,
@@ -251,5 +248,5 @@ createApp({
             removeNotification,
             saveCronJob
         }
-    },
-}).mount('#app')
+    }
+}).component('sidebar-menu', SidebarMenu).mount('#app');

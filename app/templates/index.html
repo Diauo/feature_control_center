@@ -15,10 +15,10 @@
         <nav class="nav">
             <div class="nav-container">
                 <div class="client-selector">
-                    <select v-model="selectedClient">
+                    <select v-model="currentCustomer">
                         <option value="">所有客户</option>
-                        <option v-for="client in clients" :key="client.id" :value="client.id">
-                            {{ client.name }}
+                        <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+                            {{ customer.name }}
                         </option>
                     </select>
                 </div>
@@ -44,16 +44,17 @@
                         <div class="sidebar-header">平台分类</div>
                         <div class="category-title" @click="selectCategory()">所有功能</div>
                         <div v-for="category in categories" :key="category.order_id" class="category">
+                            <!-- 顶层菜单 -->
                             <div class="category-title" @click="toggleCategory(category)">
                                 {{ category.name }}
-                                <span>{{ category.expanded ? '▼' : '▶' }}</span>
+                                <span v-if="category.child && category.child.length > 0">
+                                    {{ category.expanded ? '▼' : '▶' }}
+                                </span>
                             </div>
-                            <div class="category-content" v-if="category.expanded">
-                                <div v-for="item in category.items" :key="item.id"
-                                    :class="['category-item', selectedCategory === item.id ? 'active' : '']"
-                                    @click="selectCategory(item.code)">
-                                    {{ item.name }}
-                                </div>
+                            <!-- 递归渲染子菜单 -->
+                            <div v-if="category.expanded && category.child && category.child.length"
+                                class="child-categories">
+                                <sidebar-menu :categories="category.child"></sidebar-menu>
                             </div>
                         </div>
                     </div>
@@ -116,6 +117,5 @@
             </div>
         </div>
     </div>
-    <script src="[| url_for('static', filename='js/api/feature_api.js') |]"></script>
-    <script src="[| url_for('static', filename='js/index.js') |]"></script>
+    <script type="module" src="[| url_for('static', filename='js/index.js') |]"></script>
 </body>

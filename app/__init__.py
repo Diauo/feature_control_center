@@ -21,6 +21,8 @@ def create_app(config_class='app.config.Config'):
     app.register_blueprint(feature_bp, url_prefix='/feat')
     from app.controllers.customer_controller import customer_bp
     app.register_blueprint(customer_bp, url_prefix='/cust')
+    from app.controllers.category_controller import category_bp
+    app.register_blueprint(category_bp, url_prefix='/cate')
 
     # 注册中间件    
     log_request(app)

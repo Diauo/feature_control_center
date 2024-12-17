@@ -150,6 +150,12 @@ body {
     margin: 0.2rem 0;
 }
 
+.child-categories {
+    margin-left: 20px;
+    border-left: 1px solid #ccc;
+    padding-left: 10px;
+}
+
 .category-item:hover {
     background: rgba(255, 255, 255, 0.1);
 }
