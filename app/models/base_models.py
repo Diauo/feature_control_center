@@ -1,10 +1,15 @@
 from app import db
+from datetime import datetime
+from . import models_events
 
 class Base_model(db.Model):
     __tablename__ = "base"
     __abstract__ = True  # 标记为抽象类，不会映射到具体的表
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    created_date = db.Column(db.DateTime, default=datetime.now)
+    updated_date = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
     def save(self):
         db.session.add(self)
         db.session.commit()
@@ -31,13 +36,13 @@ class Feature(Base_model):
 class Category(Base_model):
     __tablename__ = 'base_category'
     __info__ = ''' 分类
-        分类决定功能页面展示的主要分类，下面可以设置一个或多个标签用于过滤；
-        分类存在上下级关系，可以定义复杂的嵌套以及
+        分类决定功能页面展示的主要分类，下面可以设置一个或多个标签用于过滤功能；
+        分类不与功能直接关联，而是通过标签间接关联
+        分类存在上下级关系，可以定义复杂的嵌套。
     '''
     name = db.Column(db.String(64), unique=True, nullable=False)
     parent_id = db.Column(db.Integer, unique=False, nullable=True)
     customer_id = db.Column(db.Integer, unique=False, nullable=True)
-    code = db.Column(db.String(64), unique=True, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
     tags = ""
 
@@ -48,7 +53,6 @@ class Tag(Base_model):
         标签用于标识功能，来实现过滤和搜索等功能的实现
     '''
     name = db.Column(db.String(64), unique=True, nullable=False)
-    code = db.Column(db.String(64), unique=True, nullable=False)
 
 class Customer(Base_model):
     __tablename__ = 'base_customer'
