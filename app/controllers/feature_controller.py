@@ -21,15 +21,14 @@ def get_feature_by_customer_id():
     else:
         return jsonify(data), 200
 
-@feature_bp.route('/get_feature_by_category_tags_id', methods=['GET'])
+@feature_bp.route('/get_feature_by_tags_id', methods=['GET'])
 def get_feature_by_category_tags_id():
-    category_id = request.args.get('category_id')
     tags = request.args.get('tags')
-    if not category_id and not tags:
-        return "没有有效参数分类ID[category_id]和标签ID[tags]", 400
     if tags:
         tags = tags.split(',')
-    status, msg, data = feature_service.get_feature_by_category_tags_id(category_id, tags)
+    else:
+        return "没有有效参数标签ID[tags]", 400
+    status, msg, data = feature_service.get_feature_by_tags_id(tags)
     if not status:
         return msg, 500
     else:

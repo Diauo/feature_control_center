@@ -29,7 +29,7 @@ class Feature(Base_model):
     name = db.Column(db.String(64), unique=False, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
     customer_id = db.Column(db.Integer, unique=False, nullable=False)
-    category_tags = ""
+    tags = ""
     customer_name = ""
 
 class Category(Base_model):
@@ -39,7 +39,7 @@ class Category(Base_model):
         分类不与功能直接关联，而是通过标签间接关联
         分类存在上下级关系，可以定义复杂的嵌套。
     '''
-    name = db.Column(db.String(64), unique=True, nullable=False)
+    name = db.Column(db.String(64), unique=False, nullable=False)
     parent_id = db.Column(db.Integer, unique=False, nullable=True)
     customer_id = db.Column(db.Integer, unique=False, nullable=True)
     description = db.Column(db.String(256), unique=False, nullable=True)
