@@ -17,6 +17,7 @@ createApp({
         const currentCustomer = ref('')
         const customers = ref([])
         const categories = ref([])
+
         // 加载完成后获取后端数据
         const features = ref([]);
 
@@ -94,6 +95,9 @@ createApp({
             if (!category.expanded) {
                 collapseChildren(category);
             }
+
+            // 同时标识选中了该分类，高亮该分类，并设置过滤标签
+            selectCategory()
         }
 
         // 选择分类

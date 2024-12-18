@@ -38,12 +38,14 @@ const SidebarMenu = defineComponent({
       <div>
         <div v-for="category in categories" :key="category.order_id" class="category">
           <!-- 顶层菜单 -->
-          <div class="category-title" @click="toggleCategory(category)">
+          <div class="category-title">
             {{ category.name }}
+            <div class="category-active-zone" @click="toggleCategory(category)" ></div>
             <!-- 只有有子菜单的项才显示 '▶' 或 '▼' -->
             <span v-if="category.child && category.child.length > 0">
               {{ category.expanded ? '▼' : '▶' }}
             </span>
+            <span class="button">+</span>
           </div>
 
           <!-- 递归渲染子菜单 -->

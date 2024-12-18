@@ -41,21 +41,31 @@
                 <h2>功能列表</h2>
                 <div class="features-grid">
                     <div class="sidebar">
-                        <div class="sidebar-header">平台分类</div>
-                        <div class="category-title" @click="selectCategory()">所有功能</div>
+                        <div class="sidebar-header">
+                            <div >分类</div>
+                            <div class="button">编辑</div>
+                        </div>
+                        <div class="category">
+                            <div class="category-title" @click="selectCategory()">所有功能</div>
+                        </div>
                         <div v-for="category in categories" :key="category.order_id" class="category">
                             <!-- 顶层菜单 -->
-                            <div class="category-title" @click="toggleCategory(category)">
+                            <div class="category-title" >
                                 {{ category.name }}
+                                <div class="category-active-zone" @click="toggleCategory(category)" ></div>
                                 <span v-if="category.child && category.child.length > 0">
                                     {{ category.expanded ? '▼' : '▶' }}
                                 </span>
+                                <span class="button"> + <span>
                             </div>
                             <!-- 递归渲染子菜单 -->
                             <div v-if="category.expanded && category.child && category.child.length"
                                 class="child-categories">
                                 <sidebar-menu :categories="category.child"></sidebar-menu>
                             </div>
+                        </div>
+                        <div class="category">
+                            <div class="category-title category-title--add">+ 新增分类 +</div>
                         </div>
                     </div>
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
