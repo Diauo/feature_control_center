@@ -44,6 +44,8 @@ class Category(Base_model):
     customer_id = db.Column(db.Integer, unique=False, nullable=True)
     description = db.Column(db.String(256), unique=False, nullable=True)
     order_id = db.Column(db.Integer, unique=False, nullable = True,autoincrement=True)
+    # 在树状结构中的深度级别
+    depth_level = db.Column(db.Integer, unique=False, nullable = False)
     tags = ""
 
 # 一个功能有多个Tag，多个分类也可以被定义到
