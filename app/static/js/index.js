@@ -1,25 +1,25 @@
 
-const { createApp, ref, computed, onMounted } = Vue
+const { createApp, ref, computed, onMounted, provide } = Vue
 import api from './api/api.js';
 import SidebarMenu from './defineComponent.js';
 
 createApp({
     setup() {
-        const currentPage = ref('home')
-        const activeFeature = ref(null)
-        const notifications = ref([])
-        const cronExpression = ref('')
-        const notificationCount = ref(0)
-        const isRunning = ref(false)
-        const consoleLogs = ref([])
-        const selectedCategory = ref(null)
+        const currentPage = ref('home') // 当前页面
+        const activeFeature = ref(null) // 当前激活的功能
+        const notifications = ref([])   // 通知
+        const cronExpression = ref('')  // cron表达式
+        const notificationCount = ref(0)    // 通知数量
+        const featureRunning = ref(false)   // 功能正在运行
+        const consoleLogs = ref([])     // 日志列表
+        const selectedCategory = ref(null)  // 选择的分类
+        const categorieEditMode = ref(false)  // 编辑模式
+        const modal = ref({ show: false, title: "", description: "", fields: [], hanldFunction: undefined, params: {}, modalParams: {} })  // 弹窗
 
-        const currentCustomer = ref('')
-        const customers = ref([])
-        const categories = ref([])
-
-        // 加载完成后获取后端数据
-        const features = ref([]);
+        const currentCustomer = ref('')     // 当前客户
+        const customers = ref([])           // 所有客户
+        const categories = ref([])          // 所有分类
+        const features = ref([]);           // 所有功能
 
         onMounted(async () => {
             // 获取所有功能
@@ -75,9 +75,78 @@ createApp({
             return client ? client.name : ''
         })
 
+        const toggleCategoryEdite = () => {
+            categorieEditMode.value = !categorieEditMode.value
+        }
+
+        // 打开新增分类窗口
+        const openAddCategoryModal = (category) => {
+            let fields = [
+                {
+                    type: "text",
+                    name: "名称",
+                    key: "name",
+                    label: "名称",
+                }, {
+                    type: "text",
+                    name: "排序",
+                    key: "order_id",
+                    label: "排序",
+                }
+            ]
+            openModal("新增分类", "在当前分类下创建一个子分类", fields, category, addCategory)
+        }
+
+        const addCategory = async (params, modalParams) => {
+            debugger;
+            console.log(params)
+            console.log(modalParams)
+            const requestBody = {
+                customer_id: params.customer_id,
+                depth_level: params.depth_level + 1,
+                parent_id: params.id,
+                tags: modalParams.modalParams,
+                name: modalParams.name,
+                order_id: modalParams.order_id,
+            }
+            // todo 为了提升体验，应该让API返回新增的对象，然后插入到当前对象的子列表中
+            let response = await api.category.add_category(requestBody);
+            console.log(response)
+            if(response.data.status){
+                // 刷新分类
+                response = await api.category.get_all_category();
+                categories.value = response.data.data;
+            }else{
+                alert("插入分类失败："+response.data.data)
+            }
+        }
+
+        const openModal = (title, description, fields, params, hanldFunction) => {
+            modal.value.show = true
+            modal.value.title = title
+            modal.value.fields = fields
+            modal.value.description = description
+            modal.value.params = params
+            modal.value.hanldFunction = hanldFunction
+        }
+        const submitModal = () => {
+            if (modal.value.hanldFunction) {
+                modal.value.hanldFunction(modal.value.params, modal.value.modalParams)
+            }
+            closeModal()
+        }
+        const closeModal = () => {
+            modal.value.show = false
+            modal.value.title = ""
+            modal.value.fields = ""
+            modal.value.description = ""
+            modal.value.modalParams = {}
+            modal.value.params = {}
+            modal.value.hanldFunction = undefined
+        }
+
         // 切换分类展开/收起
         const toggleCategory = (category) => {
-            debugger;
             // 如果有子菜单，递归地折叠所有子菜单
             const collapseChildren = (cat) => {
                 if (cat.child && cat.child.length > 0) {
@@ -114,7 +183,7 @@ createApp({
 
         // 关闭功能窗口
         const closeFeatureWindow = () => {
-            if (isRunning.value) {
+            if (featureRunning.value) {
                 if (confirm('功能正在运行中，确定要关闭窗口吗？')) {
                     stopFeature()
                 } else {
@@ -122,13 +191,13 @@ createApp({
                 }
             }
             activeFeature.value = null
-            isRunning.value = false
+            featureRunning.value = false
             consoleLogs.value = []
         }
 
         // 运行功能
         const runFeature = () => {
-            isRunning.value = true
+            featureRunning.value = true
             addConsoleLog(`开始运行${activeFeature.value.name}...`, 'info')
 
             // 模拟WebSocket接收到的日志
@@ -140,7 +209,7 @@ createApp({
 
         // 停止功能
         const stopFeature = () => {
-            isRunning.value = false
+            featureRunning.value = false
             addConsoleLog('功能运行已终止', 'warning')
             addNotification(`${activeFeature.value.name}已停止运行`)
         }
@@ -173,7 +242,7 @@ createApp({
 
             messages.forEach(({ msg, type, delay }) => {
                 setTimeout(() => {
-                    if (isRunning.value) { // 只有在仍在运行时才添加日志
+                    if (featureRunning.value) { // 只有在仍在运行时才添加日志
                         addConsoleLog(msg, type)
                     }
                 }, delay)
@@ -213,7 +282,7 @@ createApp({
         //         const data = JSON.parse(event.data)
         //         if (data.type === 'notification') {
         //             addNotification(data.message)
-        //         } else if (data.type === 'console' && isRunning.value) {
+        //         } else if (data.type === 'console' && featureRunning.value) {
         //             addConsoleLog(data.message, data.logType || 'info')
         //         }
         //     }
@@ -226,6 +295,10 @@ createApp({
         // 启动WebSocket连接
         // connectWebSocket()
 
+        provide('openAddCategoryModal', openAddCategoryModal);
+        provide('toggleCategory', toggleCategory);
+        provide('toggleCategoryEdite', toggleCategoryEdite);
+        provide('categorieEditMode', categorieEditMode);
         return {
             // 原有的返回值
             currentPage,
@@ -234,7 +307,7 @@ createApp({
             notifications,
             logs,
             cronExpression,
-            isRunning,
+            featureRunning,
             consoleLogs,
             categories,
             selectedCategory,
@@ -250,7 +323,14 @@ createApp({
             runFeature,
             stopFeature,
             removeNotification,
-            saveCronJob
+            saveCronJob,
+            openAddCategoryModal,
+            toggleCategoryEdite,
+            categorieEditMode,
+            modal,
+            openModal,
+            submitModal,
+            closeModal,
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

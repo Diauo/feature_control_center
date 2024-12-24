@@ -1,4 +1,4 @@
-const { createApp, defineComponent, ref } = Vue;
+const { defineComponent, inject } = Vue;
 
 // 定义 SidebarMenu 组件
 const SidebarMenu = defineComponent({
@@ -10,28 +10,13 @@ const SidebarMenu = defineComponent({
       },
     },
     setup(props) {
-      const toggleCategory = (category) => {
-        // 如果有子菜单，递归地折叠所有子菜单
-        const collapseChildren = (cat) => {
-          if (cat.child && cat.child.length > 0) {
-            cat.child.forEach(child => {
-              child.expanded = false;  // 折叠子菜单
-              collapseChildren(child); // 递归折叠
-            });
-          }
-        };
-
-        // 切换当前类别的折叠状态
-        category.expanded = !category.expanded;
-
-        // 如果折叠了当前菜单，折叠它的所有子菜单
-        if (!category.expanded) {
-          collapseChildren(category);
-        }
-      };
-
+      const openAddCategoryModal = inject('openAddCategoryModal');
+      const toggleCategory = inject('toggleCategory');
+      const categorieEditMode = inject('categorieEditMode');
       return {
+        openAddCategoryModal,
         toggleCategory,
+        categorieEditMode,
       };
     },
     template: `
@@ -40,12 +25,12 @@ const SidebarMenu = defineComponent({
           <!-- 顶层菜单 -->
           <div class="category-title">
             {{ category.name }}
-            <div class="category-active-zone" @click="toggleCategory(category)" ></div>
-            <!-- 只有有子菜单的项才显示 '▶' 或 '▼' -->
-            <span v-if="category.child && category.child.length > 0">
+            <div v-if="categorieEditMode" class="category-active-zone --category-active-zone-edit" @click="toggleCategory(category)" ></div>
+            <div v-if="!categorieEditMode" class="category-active-zone --category-active-zone-normal" @click="toggleCategory(category)" ></div>
+            <span v-if="(category.child && category.child.length > 0) && !categorieEditMode">
               {{ category.expanded ? '▼' : '▶' }}
             </span>
-            <span class="button">+</span>
+            <span v-if="categorieEditMode" class="button button--add-category" @click="openAddCategoryModal(category)">+</span>
           </div>
 
           <!-- 递归渲染子菜单 -->

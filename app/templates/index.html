@@ -42,21 +42,26 @@
                 <div class="features-grid">
                     <div class="sidebar">
                         <div class="sidebar-header">
-                            <div >分类</div>
-                            <div class="button">编辑</div>
+                            <div>分类</div>
+                            <div class="button" @click="toggleCategoryEdite()">编辑</div>
                         </div>
                         <div class="category">
                             <div class="category-title" @click="selectCategory()">所有功能</div>
                         </div>
                         <div v-for="category in categories" :key="category.order_id" class="category">
                             <!-- 顶层菜单 -->
-                            <div class="category-title" >
+                            <div class="category-title">
                                 {{ category.name }}
-                                <div class="category-active-zone" @click="toggleCategory(category)" ></div>
-                                <span v-if="category.child && category.child.length > 0">
+                                <div v-if="categorieEditMode" class="category-active-zone --category-active-zone-edit"
+                                    @click="toggleCategory(category)"></div>
+                                <div v-if="!categorieEditMode"
+                                    class="category-active-zone --category-active-zone-normal"
+                                    @click="toggleCategory(category)"></div>
+                                <span v-if="(category.child && category.child.length > 0) && !categorieEditMode">
                                     {{ category.expanded ? '▼' : '▶' }}
                                 </span>
-                                <span class="button"> + <span>
+                                <span v-if="categorieEditMode" class="button button--add-category"
+                                    @click="openAddCategoryModal(category)"> + <span>
                             </div>
                             <!-- 递归渲染子菜单 -->
                             <div v-if="category.expanded && category.child && category.child.length"
@@ -65,7 +70,8 @@
                             </div>
                         </div>
                         <div class="category">
-                            <div class="category-title category-title--add">+ 新增分类 +</div>
+                            <div v-if="categorieEditMode" class="category-title category-title--add"
+                                @click="openAddCategoryModal(category)">+ 新增分类 +</div>
                         </div>
                     </div>
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
@@ -126,6 +132,28 @@
                 {{ notification.message }}
             </div>
         </div>
+
+        <div class="modal-overlay" v-bind:class="{ active: modal.show }"></div>
+        <div class="modal" v-bind:class="{ active: modal.show }">
+            <h3>{{ modal.title }}</h3>
+            <h4>{{ modal.description }}</h4>
+
+            <!-- 动态渲染输入框 -->
+            <div v-for="(field, index) in  modal.fields" :key="index">
+                <label :for="field.name">{{ field.label }}:</label>
+                <input v-if="field.type === 'text'" type="text" v-model= "modal.modalParams[field.key]"
+                    :placeholder="'请输入' + field.label">
+                <textarea v-else-if="field.type === 'textarea'" v-model= "modal.modalParams[field.key]"
+                    :placeholder="'请输入' + field.label"></textarea>
+                <select v-else-if="field.type === 'select'">
+                    <option v-for="(option, i) in field.options" :key="i" :value="option">{{ option }}</option>
+                </select>
+            </div>
+
+            <button @click="submitModal">确认</button>
+            <button @click="closeModal">取消</button>
+        </div>
     </div>
+
     <script type="module" src="[| url_for('static', filename='js/index.js') |]"></script>
 </body>

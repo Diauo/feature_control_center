@@ -1,13 +1,15 @@
 from app import db
 from datetime import datetime
 
+
 class Base_model(db.Model):
     __tablename__ = "base"
     __abstract__ = True  # 标记为抽象类，不会映射到具体的表
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     created_date = db.Column(db.DateTime, default=datetime.now)
-    updated_date = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    updated_date = db.Column(
+        db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     def save(self):
         db.session.add(self)
@@ -21,6 +23,7 @@ class Base_model(db.Model):
         name = getattr(self, 'name', '无名model')
         return f"<{name}>"
 
+
 class Feature(Base_model):
     __tablename__ = 'base_feature'
     __info__ = ''' 功能
@@ -31,6 +34,7 @@ class Feature(Base_model):
     customer_id = db.Column(db.Integer, unique=False, nullable=False)
     tags = ""
     customer_name = ""
+
 
 class Category(Base_model):
     __tablename__ = 'base_category'
@@ -43,18 +47,20 @@ class Category(Base_model):
     parent_id = db.Column(db.Integer, unique=False, nullable=True)
     customer_id = db.Column(db.Integer, unique=False, nullable=True)
     description = db.Column(db.String(256), unique=False, nullable=True)
-    order_id = db.Column(db.Integer, unique=False, nullable = True,autoincrement=True)
-    # 在树状结构中的深度级别
-    depth_level = db.Column(db.Integer, unique=False, nullable = False)
+    order_id = db.Column(db.Integer, unique=False,
+                         nullable=True, autoincrement=True)
+    # 在树状结构中的深度级别，子类继承父类的层级
+    depth_level = db.Column(db.Integer, unique=False,
+                            nullable=False, default=0)
     tags = ""
 
-# 一个功能有多个Tag，多个分类也可以被定义到
 class Tag(Base_model):
     __tablename__ = 'base_tag'
     __info__ = ''' 标签
         标签用于标识功能，来实现过滤和搜索等功能的实现
     '''
     name = db.Column(db.String(64), unique=True, nullable=False)
+
 
 class Customer(Base_model):
     __tablename__ = 'base_customer'
