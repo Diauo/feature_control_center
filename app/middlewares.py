@@ -19,6 +19,8 @@ def global_result_format(app):
                 "code" : response.status_code,
                 "data": response_data if response_data else response.get_data().decode()
             }
+            # 请求成功，只是业务出错。覆写状态码，避免前端直接抛出异常
+            response.status_code = 200
             response.set_data(jsonify(wrapped_response).data)
         return response
     
