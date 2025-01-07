@@ -14,7 +14,7 @@ createApp({
         const consoleLogs = ref([])     // 日志列表
         const selectedCategory = ref(null)  // 选择的分类
         const categorieEditMode = ref(false)  // 编辑模式
-        const modal = ref({ show: false, title: "", description: "", fields: [], hanldFunction: undefined, params: {}, modalParams: {} })  // 弹窗
+        const modal = ref({ show: false, title: "", description: "", fields: [], hanldFunction: undefined, params: {}, modalParams: {}, top: 0, left: 0 })  // 弹窗
 
         const currentCustomer = ref('')     // 当前客户
         const customers = ref([])           // 所有客户
@@ -80,7 +80,7 @@ createApp({
         }
 
         // 打开新增分类窗口
-        const openAddCategoryModal = (category) => {
+        const openAddCategoryModal = (category, event) => {
             let fields = [
                 {
                     type: "text",
@@ -94,7 +94,8 @@ createApp({
                     label: "排序",
                 }
             ]
-            openModal("新增分类", "在当前分类下创建一个子分类", fields, category, addCategory)
+            const buttonElement = event.currentTarget;
+            openModal("新增分类", "在当前分类下创建一个子分类", fields, category, addCategory, buttonElement)
         }
 
         const addCategory = async (params, modalParams) => {
@@ -112,16 +113,19 @@ createApp({
             // todo 为了提升体验，应该让API返回新增的对象，然后插入到当前对象的子列表中
             let response = await api.category.add_category(requestBody);
             console.log(response)
-            if(response.data.status){
+            if (response.data.status) {
                 // 刷新分类
                 response = await api.category.get_all_category();
                 categories.value = response.data.data;
-            }else{
-                alert("插入分类失败："+response.data.data)
+            } else {
+                alert("插入分类失败：" + response.data.data)
             }
         }
 
-        const openModal = (title, description, fields, params, hanldFunction) => {
+        const openModal = (title, description, fields, params, hanldFunction, buttonElement) => {
+            const rect = buttonElement.getBoundingClientRect();
+            modal.value.top = rect.top + window.scrollY,
+            modal.value.left = (rect.left + window.scrollX) * 1.25
             modal.value.show = true
             modal.value.title = title
             modal.value.fields = fields

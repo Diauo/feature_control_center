@@ -61,7 +61,7 @@
                                     {{ category.expanded ? '▼' : '▶' }}
                                 </span>
                                 <span v-if="categorieEditMode" class="button button--add-category"
-                                    @click="openAddCategoryModal(category)"> + <span>
+                                    @click="openAddCategoryModal(category, $event)"> + <span>
                             </div>
                             <!-- 递归渲染子菜单 -->
                             <div v-if="category.expanded && category.child && category.child.length"
@@ -71,7 +71,7 @@
                         </div>
                         <div class="category">
                             <div v-if="categorieEditMode" class="category-title category-title--add"
-                                @click="openAddCategoryModal(category)">+ 新增分类 +</div>
+                                @click="openAddCategoryModal(category, $event)">+ 新增分类 +</div>
                         </div>
                     </div>
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
@@ -133,8 +133,13 @@
             </div>
         </div>
 
-        <div class="modal-overlay" v-bind:class="{ active: modal.show }"></div>
-        <div class="modal" v-bind:class="{ active: modal.show }">
+        <div class="modal-overlay" v-bind:class="{ active: modal.show }" @click="closeModal()"></div>
+        <div class="modal" 
+        v-bind:class="{ active: modal.show }" 
+        :style="{
+            top: modal.top + 'px',
+            left: modal.left + 'px'
+          }">
             <h3>{{ modal.title }}</h3>
             <h4>{{ modal.description }}</h4>
 

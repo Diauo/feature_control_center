@@ -30,7 +30,7 @@ const SidebarMenu = defineComponent({
             <span v-if="(category.child && category.child.length > 0) && !categorieEditMode">
               {{ category.expanded ? '▼' : '▶' }}
             </span>
-            <span v-if="categorieEditMode" class="button button--add-category" @click="openAddCategoryModal(category)">+</span>
+            <span v-if="categorieEditMode" class="button button--add-category" @click="openAddCategoryModal(category, $event)">+</span>
           </div>
 
           <!-- 递归渲染子菜单 -->
