@@ -14,7 +14,7 @@ createApp({
         const consoleLogs = ref([])     // 日志列表
         const selectedCategory = ref(null)  // 选择的分类
         const categorieEditMode = ref(false)  // 编辑模式
-        const modal = ref({ show: false, title: "", description: "", fields: [], hanldFunction: undefined, params: {}, modalParams: {}, top: 0, left: 0 })  // 弹窗
+        const modal = ref({ show: false, title: "", description: "", fields: [], buttons: [], modalParams: {}, top: 0, left: 0 })  // 弹窗
 
         const currentCustomer = ref('')     // 当前客户
         const customers = ref([])           // 所有客户
@@ -79,29 +79,9 @@ createApp({
             categorieEditMode.value = !categorieEditMode.value
         }
 
-        // 打开新增分类窗口
-        const openAddCategoryModal = (category, event) => {
-            let fields = [
-                {
-                    type: "text",
-                    name: "名称",
-                    key: "name",
-                    label: "名称",
-                }, {
-                    type: "text",
-                    name: "排序",
-                    key: "order_id",
-                    label: "排序",
-                }
-            ]
-            const buttonElement = event.currentTarget;
-            openModal("新增分类", "在当前分类下创建一个子分类", fields, category, addCategory, buttonElement)
-        }
-
-        const addCategory = async (params, modalParams) => {
-            debugger;
-            console.log(params)
-            console.log(modalParams)
+        const addCategory = async (params) => {
+            debugger
+            let modalParams = modal.value.modalParams;
             const requestBody = {
                 customer_id: params.customer_id,
                 depth_level: params.depth_level + 1,
@@ -110,19 +90,73 @@ createApp({
                 name: modalParams.name,
                 order_id: modalParams.order_id,
             }
-            // todo 为了提升体验，应该让API返回新增的对象，然后插入到当前对象的子列表中
+            if(!requestBody.name){
+                alert("请输入新分类的名称！");
+                return
+            }
+            // todo 为了提升体验，应该让API返回新增的对象，然后插入到当前对象的子列表中。
+            // 现在的做法是插入完成后刷新侧边栏，会导致侧边栏全部折叠
             let response = await api.category.add_category(requestBody);
             console.log(response)
             if (response.data.status) {
                 // 刷新分类
                 response = await api.category.get_all_category();
                 categories.value = response.data.data;
+                closeModal()
             } else {
                 alert("插入分类失败：" + response.data.data)
             }
         }
 
-        const openModal = (title, description, fields, params, hanldFunction, buttonElement) => {
+        const delCategory = async (params) => {
+            debugger;
+            const requestBody = {
+                id: params.id
+            }
+            // todo 删除成功，直接利用引用删除现有嵌套结构
+            let response = await api.category.del_category(requestBody);
+            console.log(response)
+            if (response.data.status) {
+                // 刷新分类
+                response = await api.category.get_all_category();
+                categories.value = response.data.data;
+                closeModal()
+            } else {
+                alert("删除分类失败：" + response.data.data)
+            }
+        }
+        // 打开新增分类窗口
+        const openAddCategoryModal = (category, event) => {
+            let fields = [
+                {
+                    type: "text",
+                    key: "name",
+                    label: "名称",
+                }, {
+                    type: "text",
+                    key: "order_id",
+                    label: "排序",
+                }
+            ]
+            let buttons = [
+                {
+                    label: "提交",
+                    style: "",
+                    function: addCategory,
+                    param: category
+                },
+                {
+                    label: "删除",
+                    style: "",
+                    function: delCategory,
+                    param: category
+                }
+            ]
+            const buttonElement = event.currentTarget;
+            openModal("编辑分类", "填写数据点击新增，在当前分类下创建一个子分类；\<br\>点击删除，删除当前分类", fields, buttons, buttonElement)
+        }
+
+        const openModal = (title, description, fields, buttons, buttonElement) => {
             const rect = buttonElement.getBoundingClientRect();
             modal.value.top = rect.top + window.scrollY,
             modal.value.left = (rect.left + window.scrollX) * 1.25
@@ -130,14 +164,7 @@ createApp({
             modal.value.title = title
             modal.value.fields = fields
             modal.value.description = description
-            modal.value.params = params
-            modal.value.hanldFunction = hanldFunction
-        }
-        const submitModal = () => {
-            if (modal.value.hanldFunction) {
-                modal.value.hanldFunction(modal.value.params, modal.value.modalParams)
-            }
-            closeModal()
+            modal.value.buttons = buttons
         }
         const closeModal = () => {
             modal.value.show = false
@@ -333,7 +360,6 @@ createApp({
             categorieEditMode,
             modal,
             openModal,
-            submitModal,
             closeModal,
         }
     }

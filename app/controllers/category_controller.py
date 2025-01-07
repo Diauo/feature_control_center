@@ -41,3 +41,16 @@ def add_category():
         return "没有有效的参数：客户[customer_id]", 400
     category.save()
     return "成功", 200
+
+
+@category_bp.route('/del_category', methods=['POST'])
+def del_category():
+    request_body = request.get_json()
+    if not request_body:
+        return "没有有效的参数", 400
+    category = Category(**request_body)
+    status, msg, data = category_service.del_category(category.id)
+    if not status:
+        return msg, 500
+    else:
+        return msg, 200

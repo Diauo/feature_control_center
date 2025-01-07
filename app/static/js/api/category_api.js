@@ -8,6 +8,9 @@ const category_api = {
   add_category(category) {
     return axios.post('/api/cate/add_category', category);
   },
+  del_category(category) {
+    return axios.post('/api/cate/del_category', category);
+  },
 };
 
 export default category_api

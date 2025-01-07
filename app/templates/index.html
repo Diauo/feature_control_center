@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>功能管理面板</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="[| url_for('static', filename='js/vue.global.min.js') |]"></script>
+    <script src="[| url_for('static', filename='js/axios.min.js') |]"></script>
     <link rel="stylesheet" href="[| url_for('static', filename='css/index.css') |]">
 </head>
 
@@ -61,7 +61,7 @@
                                     {{ category.expanded ? '▼' : '▶' }}
                                 </span>
                                 <span v-if="categorieEditMode" class="button button--add-category"
-                                    @click="openAddCategoryModal(category, $event)"> + <span>
+                                    @click="openAddCategoryModal(category, $event)">📝<span>
                             </div>
                             <!-- 递归渲染子菜单 -->
                             <div v-if="category.expanded && category.child && category.child.length"
@@ -134,29 +134,31 @@
         </div>
 
         <div class="modal-overlay" v-bind:class="{ active: modal.show }" @click="closeModal()"></div>
-        <div class="modal" 
-        v-bind:class="{ active: modal.show }" 
-        :style="{
+        <div class="modal" v-bind:class="{ active: modal.show }" :style="{
             top: modal.top + 'px',
             left: modal.left + 'px'
           }">
             <h3>{{ modal.title }}</h3>
-            <h4>{{ modal.description }}</h4>
+            <h4 v-html="modal.description"></h4>
 
             <!-- 动态渲染输入框 -->
-            <div v-for="(field, index) in  modal.fields" :key="index">
-                <label :for="field.name">{{ field.label }}:</label>
-                <input v-if="field.type === 'text'" type="text" v-model= "modal.modalParams[field.key]"
-                    :placeholder="'请输入' + field.label">
-                <textarea v-else-if="field.type === 'textarea'" v-model= "modal.modalParams[field.key]"
-                    :placeholder="'请输入' + field.label"></textarea>
-                <select v-else-if="field.type === 'select'">
+            <div v-for="(field, index) in modal.fields" :key="index">
+                <label :id="'modal-label-'+index">{{ field.label }}:</label>
+                <input :id="'modal-input-'+index" v-if="field.type === 'text'" type="text"
+                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label">
+                <textarea :id="'modal-textarea-'+index" v-else-if="field.type === 'textarea'"
+                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label"></textarea>
+                <select :id="'modal-select-'+index" v-else-if="field.type === 'select'">
                     <option v-for="(option, i) in field.options" :key="i" :value="option">{{ option }}</option>
                 </select>
             </div>
-
-            <button @click="submitModal">确认</button>
-            <button @click="closeModal">取消</button>
+            <div style="display: flex;">
+                <div v-for="(button, index) in modal.buttons" :key="index">
+                    <button :id="'modal-button-'+index" :class="button.style" @click="button.function(button.param)">
+                        {{ button.label }} </button>
+                </div>
+                <button id="modal-button-cancel" class @click="closeModal">取消</button>
+            </div>
         </div>
     </div>
 

@@ -35,3 +35,27 @@ def get_category_by_customer_id(customer_id = None):
     # 提取顶层节点
     category_tree = [item for item in categorys if item['parent_id'] == 0]
     return True, "成功", category_tree
+
+def add_category(category):
+    # 查找标签对应的ID，并插入关联关系
+    
+    # 没有设定排序ID，自动排序
+
+    pass;
+
+def get_all_tag():
+    pass;
+
+def del_category(category_id):
+    sql = text('''select count(id) child_count from base_category where parent_id = :category_id''')
+    result = db.session.execute(sql, {'category_id': category_id})
+    row = result.fetchone()
+    child_count = row.child_count  
+    # 如果有子级数据，阻止删除
+    if child_count > 0:
+        return False, f"该分类仍有{child_count}个子分类，请删除子分类再删除本分类！", None
+    sql = text('''delete from base_category where id = :category_id''')
+    result = db.session.execute(sql, {'category_id': category_id})
+    row_count = result.rowcount
+    db.session.commit()
+    return True, f"成功删除{row_count}条数据", None
