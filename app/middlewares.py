@@ -28,10 +28,5 @@ def global_result_format(app):
 def exception_handler(app):
     @app.errorhandler(Exception)
     def handle_exception(e):
-        # 默认异常返回值
-        wrapped_response = {
-            "status": False,
-            "code" : 500,
-            "data": f"{type(Exception).__name__}：{Exception}"
-        }
-        return jsonify(wrapped_response), 500
+        error_message = f"{type(e).__name__}: {str(e)}"
+        return error_message, 500

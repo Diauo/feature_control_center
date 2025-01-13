@@ -11,7 +11,7 @@ def get_all_customer():
     return True, "成功", model_to_dict(result, Customer)
 
 def get_customer_by_id(customer_id):
-    if not customer_id:
+    if customer_id is None:
         return False, "customer_id为空", []
     sql = text('''
         select * from base_customer where id = :customer_id

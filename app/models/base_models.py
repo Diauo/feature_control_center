@@ -8,12 +8,12 @@ class Base_model(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     created_date = db.Column(db.DateTime, default=datetime.now)
-    updated_date = db.Column(
-        db.DateTime, default=datetime.now, onupdate=datetime.now)
+    updated_date = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
     def save(self):
         db.session.add(self)
         db.session.commit()
+        return self
 
     def delete(self):
         db.session.delete(self)
@@ -22,6 +22,12 @@ class Base_model(db.Model):
     def __repr__(self):
         name = getattr(self, 'name', '无名model')
         return f"<{name}>"
+    
+    def to_dict(self):
+        data = {}
+        for column in self.__table__.columns:
+            data[column.name] = getattr(self, column.name)
+        return data
 
 
 class Feature(Base_model):
@@ -53,6 +59,8 @@ class Category(Base_model):
     depth_level = db.Column(db.Integer, unique=False,
                             nullable=False, default=0)
     tags = ""
+    expanded = False
+    selected = False
 
 class Tag(Base_model):
     __tablename__ = 'base_tag'

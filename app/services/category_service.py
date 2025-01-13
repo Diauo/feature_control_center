@@ -5,7 +5,7 @@ from app.util.serviceUtil import model_to_dict
 
 def get_category_by_customer_id(customer_id = None):
     condition = ""
-    if customer_id:
+    if not customer_id is None:
         condition = "WHERE CG.ID = :customer_id";
     sql = text(f'''
                 select cg.*, group_concat(tg.name, ',') tags from base_category cg
@@ -16,10 +16,6 @@ def get_category_by_customer_id(customer_id = None):
                ''')
     result = db.session.execute(sql, {'customer_id': customer_id}).fetchall()
     categorys = model_to_dict(result, Category)
-    # 添加折叠关系和选中关系
-    for item in categorys:
-        item['expanded'] = False
-        item['selected'] = False
     # 将数据转换为字典格式，便于查找
     data_dict = {item['id']: item for item in categorys}
     # 构建父子关系

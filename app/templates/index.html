@@ -71,7 +71,7 @@
                         </div>
                         <div class="category">
                             <div v-if="categorieEditMode" class="category-title category-title--add"
-                                @click="openAddCategoryModal(category, $event)">+ 新增分类 +</div>
+                                @click="openAddCategoryModal(null, $event)">+ 新增分类 +</div>
                         </div>
                     </div>
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"

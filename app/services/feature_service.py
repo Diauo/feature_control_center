@@ -16,7 +16,7 @@ def get_all_feature():
     return True, "成功", model_to_dict(result, Feature)
 
 def get_feature_by_customer_id(customer_id):
-    if not customer_id:
+    if customer_id is None:
         return False, "客户ID[customer_id]为空", []
     sql = text('''
                select ft.id, ft.name, ft.description, ft.customer_id,
@@ -32,7 +32,7 @@ def get_feature_by_customer_id(customer_id):
     return True, "成功", model_to_dict(result, Feature)
 
 def get_feature_by_tags_id(tags = None):
-    if not tags:
+    if tags is None:
         return False, "没有有效参数标签ID[tags]", []
     condition_list = []
     condition = ""

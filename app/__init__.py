@@ -31,4 +31,9 @@ def create_app(config_class='app.config.Config'):
 
     # 初始化数据库
     db.init_app(app)
+    print("="*30)
+    print("")
+    print("初始化完成")
+    print("")
+    print("="*30)
     return app

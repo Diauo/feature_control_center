@@ -19,19 +19,35 @@ createApp({
         const currentCustomer = ref('')     // 当前客户
         const customers = ref([])           // 所有客户
         const categories = ref([])          // 所有分类
+        const categoriesReferenceMap = new Map()          // 分类映射Map
         const features = ref([]);           // 所有功能
 
         onMounted(async () => {
             // 获取所有功能
             let response = await api.feature.get_all_feature();
             features.value = response.data.data;
-            // 获取所有客户
+            // 获取所有客户 
             response = await api.customer.get_all_customer();
             customers.value = response.data.data;
             // 获取所有分类
             response = await api.category.get_all_category();
             categories.value = response.data.data;
+            // 构建分类引用映射
+            buildCategoryReferenceMap(categories.value);
         })
+
+        // 构建分类引用映射，用于通过映射直接修改节点
+        const buildCategoryReferenceMap = (nodes) => {
+            if (!nodes || !Array.isArray(nodes)) return;
+            nodes.forEach((node) => {
+                // 将当前节点存入 Map
+                categoriesReferenceMap.set(node.id, node);
+                // 递归处理子节点
+                if (node.child && node.child.length > 0) {
+                    buildCategoryReferenceMap(node.child);
+                }
+            });
+        }
 
         const logs = ref([
             { id: 1, message: '系统启动 - 2024-03-12 10:00:00' },
@@ -41,6 +57,7 @@ createApp({
 
 
         // 根据选择的客户筛选分类
+        // todo 没有选择具体客户的情况下，新增分类和功能可能无法设定归属
         const filteredCategories = computed(() => {
             if (!currentCustomer.value) {
                 return categories.value
@@ -90,18 +107,25 @@ createApp({
                 name: modalParams.name,
                 order_id: modalParams.order_id,
             }
-            if(!requestBody.name){
+            if (!requestBody.name) {
                 alert("请输入新分类的名称！");
                 return
             }
-            // todo 为了提升体验，应该让API返回新增的对象，然后插入到当前对象的子列表中。
-            // 现在的做法是插入完成后刷新侧边栏，会导致侧边栏全部折叠
             let response = await api.category.add_category(requestBody);
             console.log(response)
             if (response.data.status) {
                 // 刷新分类
-                response = await api.category.get_all_category();
-                categories.value = response.data.data;
+                const parent = categoriesReferenceMap.get(params.id);
+                if (parent) {
+                    if (!parent.child) {
+                      parent.child = [];
+                    }
+                    parent.child.push(response.data.data);
+                }else{
+                    // 新增的是0级分类，存入categories并将映射写入categoriesReferenceMap
+                    let index = categories.value.push(response.data.data)
+                    categoriesReferenceMap.set(response.data.data.id, categories[index])
+                }
                 closeModal()
             } else {
                 alert("插入分类失败：" + response.data.data)
@@ -113,13 +137,23 @@ createApp({
             const requestBody = {
                 id: params.id
             }
-            // todo 删除成功，直接利用引用删除现有嵌套结构
             let response = await api.category.del_category(requestBody);
-            console.log(response)
             if (response.data.status) {
-                // 刷新分类
-                response = await api.category.get_all_category();
-                categories.value = response.data.data;
+                // 找到父级删除该子节点
+                const parent = categoriesReferenceMap.get(params.parent_id);
+                if (parent?.child) {
+                    const childIndex = parent.child.findIndex(child => child.id === params.id);
+                    if (childIndex !== -1) {
+                        parent.child.splice(childIndex, 1);
+                    }
+                }else{
+                    // 是0级节点，从categories里面删除
+                    const index = categories.value.findIndex(categories => categories.id === params.id)
+                    if (index !== -1) {
+                        categories.value.splice(index, 1);
+                    }
+                    categoriesReferenceMap.delete(params.id)
+                }
                 closeModal()
             } else {
                 alert("删除分类失败：" + response.data.data)
@@ -127,6 +161,14 @@ createApp({
         }
         // 打开新增分类窗口
         const openAddCategoryModal = (category, event) => {
+            if(!category){
+                category = {
+                    "customer_id": currentCustomer.value,
+                    "depth_level": -1,
+                    "id": 0,
+                    "expanded": false
+                }
+            }
             let fields = [
                 {
                     type: "text",
@@ -140,7 +182,7 @@ createApp({
             ]
             let buttons = [
                 {
-                    label: "提交",
+                    label: "新增",
                     style: "",
                     function: addCategory,
                     param: category
@@ -159,7 +201,7 @@ createApp({
         const openModal = (title, description, fields, buttons, buttonElement) => {
             const rect = buttonElement.getBoundingClientRect();
             modal.value.top = rect.top + window.scrollY,
-            modal.value.left = (rect.left + window.scrollX) * 1.25
+                modal.value.left = (rect.left + window.scrollX) * 1.25
             modal.value.show = true
             modal.value.title = title
             modal.value.fields = fields

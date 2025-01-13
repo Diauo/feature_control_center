@@ -17,7 +17,7 @@ def get_all_category():
 @category_bp.route('/get_category_by_customer_id', methods=['GET'])
 def get_category_by_customer_id():
     customer_id = request.args.get('id')
-    if not customer_id:
+    if customer_id is None:
         return "没有有效的参数：客户ID[customer_id]", 400
     status, msg, data = category_service.get_category_by_customer_id(
         customer_id)
@@ -30,17 +30,17 @@ def get_category_by_customer_id():
 @category_bp.route('/add_category', methods=['POST'])
 def add_category():
     request_body = request.get_json()
-    if not request_body:
+    if request_body is None:
         return "没有有效的参数", 400
     category = Category(**request_body)
-    if not category.depth_level:
+    if category.depth_level is None:
         return "没有有效的参数：深度层级[depth_level]", 400
-    if not category.parent_id:
+    if category.parent_id is None:
         return "没有有效的参数：父级ID[parent_id]", 400
-    if not category.customer_id:
+    if category.customer_id is None:
         return "没有有效的参数：客户[customer_id]", 400
-    category.save()
-    return "成功", 200
+    result = category.save().to_dict()
+    return jsonify(result), 200
 
 
 @category_bp.route('/del_category', methods=['POST'])

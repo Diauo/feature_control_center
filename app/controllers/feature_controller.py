@@ -13,7 +13,7 @@ def get_all_feature():
 @feature_bp.route('/get_feature_by_customer_id', methods=['GET'])
 def get_feature_by_customer_id():
     customer_id = request.args.get('id')
-    if not customer_id:
+    if customer_id is None:
         return "没有有效的参数", 400
     status, msg, data = feature_service.get_feature_by_customer_id(customer_id)
     if not status:
