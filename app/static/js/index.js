@@ -354,40 +354,18 @@ createApp({
             const minutes = ('0' + now.getMinutes()).slice(-2);
             const seconds = ('0' + now.getSeconds()).slice(-2);
             const id = notificationCount.value++;
-            message = "💡 "+hours+":"+minutes+":"+seconds + "\<br\>"+message
-            const notification = {
+            message = "💡 " + hours + ":" + minutes + ":" + seconds + "\<br\>" + message
+            notifications.value.push({
                 id,
-                message,
-                visible: false, // 控制入场动画
-                removing: false, // 控制删除动画
-            };
-            notifications.value.push(notification);
-            // 触发入场动画
-            setTimeout(() => {
-                notification.visible = true;
-            }, 30);
-
-            // 10秒后自动移除通知
+                message
+            });
             setTimeout(() => {
                 removeNotification(id);
-            }, 1000000);
+            }, 10000);
         };
 
-        // 移除通知
         const removeNotification = (id) => {
-            const notification = notifications.value.find((n) => n.id === id);
-            if (notification) {
-                // 触发删除动画
-                notification.visible = false;
-                notification.removing = true;
-                // 监听动画结束事件
-                setTimeout(() => {
-                    const index = notifications.value.findIndex((n) => n.id === id);
-                    if (index !== -1) {
-                        notifications.value.splice(index, 1); // 移除通知
-                    }
-                }, 300); // 等待动画完成（300ms 是动画时长）
-            }
+            notifications.value = notifications.value.filter(notification => notification.id !== id);
         };
 
         // 保存定时任务

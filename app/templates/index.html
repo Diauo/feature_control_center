@@ -127,10 +127,11 @@
 
         <!-- 通知区域 -->
         <div class="notifications-container">
-            <div v-for="notification in notifications" :key="notification.id" class="notification"
-                :class="{ 'slide-in': notification.visible, 'notification-remove': notification.removing }"
-                @click="removeNotification(notification.id)" v-html="notification.message">
-            </div>
+            <transition-group name="notification" tag="div" class="notifications-group">
+                <div v-for="notification in notifications" :key="notification.id" class="notification"
+                    @click="removeNotification(notification.id)" v-html="notification.message">
+                </div>
+            </transition-group>
         </div>
 
         <div class="modal-overlay" v-bind:class="{ active: modal.show }" @click="closeModal()"></div>

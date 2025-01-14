@@ -251,28 +251,54 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
     width: 160px;
+    transition: all 0.6s ease;
     cursor: pointer;
-    /* transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease; */
-    transition: all 0.3s ease;
-    flex-shrink: 0; /* 防止通知被压缩 */
-    transform: translateX(100%);
-    opacity: 0;
+    flex-shrink: 0;
     margin: 18px 6px 18px 6px;
 }
 
-.notification:hover {
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+.notification:hover{
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
+}
+.notifications-group {
+    display: flex;
+    flex-direction: row;
+    /* 横向排列 */
+    gap: 10px;
+    /* 通知之间的间距 */
 }
 
-.notification.slide-in {
+.notification-enter-active,
+.notification-leave-active {
+    transition: all 0.6s ease;
+}
+
+.notification-enter-from {
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+.notification-enter-to {
     transform: translateX(0);
     opacity: 1;
 }
 
-.notification-remove {
-    transform: translateY(100%);
+.notification-leave-from {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.notification-leave-to {
+    transform: translateX(-100%);
     opacity: 0;
 }
+
+.notification-move {
+    transition: transform 0.6s ease;
+}
+
+
 
 .feature-window {
     position: fixed;
@@ -410,7 +436,7 @@ button {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s,transform 0.3s ease;
+    transition: background-color 0.3s, transform 0.3s ease;
 }
 
 button:hover {
