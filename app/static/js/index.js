@@ -1,5 +1,5 @@
 
-const { createApp, ref, computed, onMounted, provide } = Vue
+const { createApp, ref, computed, onMounted, provide, nextTick } = Vue
 import api from './api/api.js';
 import SidebarMenu from './defineComponent.js';
 
@@ -15,7 +15,7 @@ createApp({
         const selectedCategory = ref(null)  // 选择的分类
         const categorieEditMode = ref(false)  // 编辑模式
         const modal = ref({ show: false, title: "", description: "", fields: [], buttons: [], modalParams: {}, top: 0, left: 0 })  // 弹窗
-
+        const modalWindow = ref(null)
         const currentCustomer = ref('')     // 当前客户
         const customers = ref([])           // 所有客户
         const categories = ref([])          // 所有分类
@@ -118,10 +118,10 @@ createApp({
                 const parent = categoriesReferenceMap.get(params.id);
                 if (parent) {
                     if (!parent.child) {
-                      parent.child = [];
+                        parent.child = [];
                     }
                     parent.child.push(response.data.data);
-                }else{
+                } else {
                     // 新增的是0级分类，存入categories并将映射写入categoriesReferenceMap
                     let index = categories.value.push(response.data.data)
                     categoriesReferenceMap.set(response.data.data.id, categories[index])
@@ -146,7 +146,7 @@ createApp({
                     if (childIndex !== -1) {
                         parent.child.splice(childIndex, 1);
                     }
-                }else{
+                } else {
                     // 是0级节点，从categories里面删除
                     const index = categories.value.findIndex(categories => categories.id === params.id)
                     if (index !== -1) {
@@ -161,7 +161,7 @@ createApp({
         }
         // 打开新增分类窗口
         const openAddCategoryModal = (category, event) => {
-            if(!category){
+            if (!category) {
                 category = {
                     "customer_id": currentCustomer.value,
                     "depth_level": -1,
@@ -183,30 +183,55 @@ createApp({
             let buttons = [
                 {
                     label: "新增",
-                    style: "",
+                    style: "btn-confirm",
                     function: addCategory,
                     param: category
                 },
                 {
+                    label: "修改",
+                    style: "btn-warnning",
+                    function: closeModal,
+                    param: category
+                },
+                {
                     label: "删除",
-                    style: "",
+                    style: "btn-danger",
                     function: delCategory,
                     param: category
                 }
             ]
             const buttonElement = event.currentTarget;
-            openModal("编辑分类", "填写数据点击新增，在当前分类下创建一个子分类；\<br\>点击删除，删除当前分类", fields, buttons, buttonElement)
+            openModal("分类菜单", "新增：根据填写的信息，在本分类下新增一个子菜单；\<br\>修改：根据填写的信息修改当前分类；\<br\>删除：删除当前分类。", fields, buttons, buttonElement)
         }
 
         const openModal = (title, description, fields, buttons, buttonElement) => {
-            const rect = buttonElement.getBoundingClientRect();
-            modal.value.top = rect.top + window.scrollY,
-                modal.value.left = (rect.left + window.scrollX) * 1.25
-            modal.value.show = true
             modal.value.title = title
             modal.value.fields = fields
             modal.value.description = description
             modal.value.buttons = buttons
+            modal.value.show = true
+            // 更新动态窗口的位置，避免超出屏幕
+            nextTick(() => {
+                if (modalWindow.value) {
+                    const modalRect = modalWindow.value.getBoundingClientRect();
+                    const modalWidth = modalRect.width;
+                    const modalHeight = modalRect.height;
+                    const buttonRect = buttonElement.getBoundingClientRect();
+                    let top = buttonRect.top + window.scrollY;
+                    let left = (buttonRect.left + window.scrollX) * 1.25;
+                    // 检查是否超出屏幕底部
+                    if (top + modalHeight > window.innerHeight + window.scrollY) {
+                        top = window.innerHeight + window.scrollY - modalHeight;
+                    }
+                    // 检查是否超出屏幕右侧
+                    if (left + modalWidth > window.innerWidth + window.scrollX) {
+                        left = window.innerWidth + window.scrollX - modalWidth;
+                    }
+                    modal.value.top = top
+                    modal.value.left = left
+                }
+            });
+
         }
         const closeModal = () => {
             modal.value.show = false
@@ -324,24 +349,46 @@ createApp({
 
         // 添加通知
         const addNotification = (message) => {
-            const id = notificationCount.value++
-            notifications.value.push({
+            const now = new Date();
+            const hours = ('0' + now.getHours()).slice(-2);
+            const minutes = ('0' + now.getMinutes()).slice(-2);
+            const seconds = ('0' + now.getSeconds()).slice(-2);
+            const id = notificationCount.value++;
+            message = "💡 "+hours+":"+minutes+":"+seconds + "\<br\>"+message
+            const notification = {
                 id,
-                message
-            })
+                message,
+                visible: false, // 控制入场动画
+                removing: false, // 控制删除动画
+            };
+            notifications.value.push(notification);
+            // 触发入场动画
+            setTimeout(() => {
+                notification.visible = true;
+            }, 30);
+
             // 10秒后自动移除通知
             setTimeout(() => {
-                removeNotification(id)
-            }, 10000)
-        }
+                removeNotification(id);
+            }, 1000000);
+        };
 
         // 移除通知
         const removeNotification = (id) => {
-            const index = notifications.value.findIndex(n => n.id === id)
-            if (index !== -1) {
-                notifications.value.splice(index, 1)
+            const notification = notifications.value.find((n) => n.id === id);
+            if (notification) {
+                // 触发删除动画
+                notification.visible = false;
+                notification.removing = true;
+                // 监听动画结束事件
+                setTimeout(() => {
+                    const index = notifications.value.findIndex((n) => n.id === id);
+                    if (index !== -1) {
+                        notifications.value.splice(index, 1); // 移除通知
+                    }
+                }, 300); // 等待动画完成（300ms 是动画时长）
             }
-        }
+        };
 
         // 保存定时任务
         const saveCronJob = () => {
@@ -401,6 +448,7 @@ createApp({
             toggleCategoryEdite,
             categorieEditMode,
             modal,
+            modalWindow,
             openModal,
             closeModal,
         }

@@ -87,7 +87,7 @@
                 <h2>定时任务配置</h2>
                 <div class="cron-editor">
                     <input type="text" v-model="cronExpression" placeholder="Cron表达式">
-                    <button class="btn-primary" @click="saveCronJob">保存</button>
+                    <button class="btn-confirm" @click="saveCronJob">保存</button>
                 </div>
             </div>
 
@@ -119,45 +119,47 @@
                 </div>
             </div>
             <div class="feature-window-footer">
-                <button class="btn-secondary" @click="closeFeatureWindow">关闭</button>
-                <button class="btn-danger" v-if="isRunning" @click="stopFeature">终止运行</button>
-                <button class="btn-primary" v-else @click="runFeature">运行</button>
+                <button class="btn-cancel" @click="closeFeatureWindow">关闭</button>
+                <button class="btn-danger" v-if="featureRunning" @click="stopFeature">终止运行</button>
+                <button class="btn-confirm" v-else @click="runFeature">运行</button>
             </div>
         </div>
 
         <!-- 通知区域 -->
         <div class="notifications-container">
             <div v-for="notification in notifications" :key="notification.id" class="notification"
-                @click="removeNotification(notification.id)">
-                {{ notification.message }}
+                :class="{ 'slide-in': notification.visible, 'notification-remove': notification.removing }"
+                @click="removeNotification(notification.id)" v-html="notification.message">
             </div>
         </div>
 
         <div class="modal-overlay" v-bind:class="{ active: modal.show }" @click="closeModal()"></div>
-        <div class="modal" v-bind:class="{ active: modal.show }" :style="{
+        <div class="modal" ref="modalWindow" v-bind:class="{ active: modal.show }" :style="{
             top: modal.top + 'px',
             left: modal.left + 'px'
           }">
-            <h3>{{ modal.title }}</h3>
+            <h1>{{ modal.title }}</h1>
+            <hr class="modal-line">
             <h4 v-html="modal.description"></h4>
-
+            <hr class="modal-line">
             <!-- 动态渲染输入框 -->
             <div v-for="(field, index) in modal.fields" :key="index">
-                <label :id="'modal-label-'+index">{{ field.label }}:</label>
-                <input :id="'modal-input-'+index" v-if="field.type === 'text'" type="text"
+                <label :id="'modal-label-'+index" class="modal-label">{{ field.label }}:</label>
+                <input :id="'modal-input-'+index" class="modal-input" v-if="field.type === 'text'" type="text"
                     v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label">
-                <textarea :id="'modal-textarea-'+index" v-else-if="field.type === 'textarea'"
+                <textarea :id="'modal-textarea-'+index" class="modal-input" v-else-if="field.type === 'textarea'"
                     v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label"></textarea>
-                <select :id="'modal-select-'+index" v-else-if="field.type === 'select'">
+                <select :id="'modal-select-'+index" class="modal-input" v-else-if="field.type === 'select'">
                     <option v-for="(option, i) in field.options" :key="i" :value="option">{{ option }}</option>
                 </select>
             </div>
+            <hr class="modal-line">
             <div style="display: flex;">
                 <div v-for="(button, index) in modal.buttons" :key="index">
                     <button :id="'modal-button-'+index" :class="button.style" @click="button.function(button.param)">
                         {{ button.label }} </button>
                 </div>
-                <button id="modal-button-cancel" class @click="closeModal">取消</button>
+                <button id="modal-button-cancel" class="btn-cancel" @click="closeModal">取消</button>
             </div>
         </div>
     </div>
