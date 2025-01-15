@@ -101,16 +101,27 @@ body {
     background-color: #555;
 }
 
-.sidebar {
+.sidebar-container {
+    width: 16%;
+    height: 100%;
+    overflow: hidden;
+    /* 隐藏滚动条 */
     position: fixed;
     left: 0;
     top: 68px;
     bottom: 0;
-    width: 250px;
+}
+
+.sidebar {
+    width: calc(100% + 20px);
+    /* 增加宽度以覆盖滚动条 */
+    height: 100%;
     background: #2c3e50;
     color: white;
     padding: 1rem;
-    overflow-y: auto;
+    overflow-y: scroll;
+    padding-right: 20px;
+    /* 避免内容被滚动条遮挡 */
 }
 
 .sidebar-header {
@@ -257,10 +268,11 @@ body {
     margin: 18px 6px 18px 6px;
 }
 
-.notification:hover{
+.notification:hover {
     transform: translateY(-5px);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6);
 }
+
 .notifications-group {
     display: flex;
     flex-direction: row;

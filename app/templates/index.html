@@ -40,6 +40,7 @@
             <div v-if="currentPage === 'home'">
                 <h2>功能列表</h2>
                 <div class="features-grid">
+                    <div class="sidebar-container">
                     <div class="sidebar">
                         <div class="sidebar-header">
                             <div>分类</div>
@@ -73,6 +74,7 @@
                             <div v-if="categorieEditMode" class="category-title category-title--add"
                                 @click="openAddCategoryModal(null, $event)">+ 新增分类 +</div>
                         </div>
+                    </div>
                     </div>
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
                         @click="openFeatureWindow(feature)">
