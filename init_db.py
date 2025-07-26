@@ -1,6 +1,5 @@
 from app import create_app, db
-from app.models.base_models import Feature, Category, Customer
-from app.models.union_models import *
+from app.models.base_models import *
 app = create_app()
 
 with app.app_context():

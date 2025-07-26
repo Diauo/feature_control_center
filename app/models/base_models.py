@@ -38,7 +38,8 @@ class Feature(Base_model):
     name = db.Column(db.String(64), unique=False, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
     customer_id = db.Column(db.Integer, unique=False, nullable=False)
-    tags = ""
+    category_id = db.Column(db.Integer, unique=False, nullable=False)
+    feature_file_name = db.Column(db.String(256), unique=False, nullable=True)
     customer_name = ""
 
 
@@ -62,14 +63,6 @@ class Category(Base_model):
     expanded = False
     selected = False
 
-class Tag(Base_model):
-    __tablename__ = 'base_tag'
-    __info__ = ''' 标签
-        标签用于标识功能，来实现过滤和搜索等功能的实现
-    '''
-    name = db.Column(db.String(64), unique=True, nullable=False)
-
-
 class Customer(Base_model):
     __tablename__ = 'base_customer'
     __info__ = ''' 客户
@@ -78,6 +71,17 @@ class Customer(Base_model):
     name = db.Column(db.String(64), unique=True, nullable=False)
     description = db.Column(db.String(256), unique=False, nullable=True)
 
+class Config(Base_model):
+    __tablename__ = 'base_config'
+    __info__ = ''' 配置
+        用于管理系统和功能附加的配置项。
+        feature_id: 关联的功能id，0表示系统固定配置
+    '''
+    name = db.Column(db.String(64), unique=False, nullable=False)
+    value = db.Column(db.String(256), unique=False, nullable=True)
+    default_value = db.Column(db.String(256), unique=False, nullable=True)
+    description = db.Column(db.String(256), unique=False, nullable=True)
+    feature_id = db.Column(db.Integer, unique=False, nullable=False, default=0)
 
 # 最后引入模型事件
 from . import models_events

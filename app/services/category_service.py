@@ -8,9 +8,7 @@ def get_category_by_customer_id(customer_id = None):
     if not customer_id is None:
         condition = "WHERE CG.ID = :customer_id";
     sql = text(f'''
-                select cg.*, group_concat(tg.name, ',') tags from base_category cg
-                left join union_category_tag uct on cg.id = uct.category_id
-                left join base_tag tg on tg.id = uct.tag_id
+                select cg.* from base_category cg
                 {condition}
                 group by cg.id
                ''')
@@ -39,9 +37,6 @@ def add_category(category):
 
     pass;
 
-def get_all_tag():
-    pass;
-
 def del_category(category_id):
     sql = text('''select count(id) child_count from base_category where parent_id = :category_id''')
     result = db.session.execute(sql, {'category_id': category_id})
@@ -55,3 +50,12 @@ def del_category(category_id):
     row_count = result.rowcount
     db.session.commit()
     return True, f"成功删除{row_count}条数据", None
+
+def get_category_by_name(category_name = None):
+    if category_name is None:
+        return False, "category_name为空", []
+    sql = text('''
+        select * from base_category where name = :category_name
+    ''')
+    result = db.session.execute(sql, {'category_name': category_name}).fetchall()
+    return True, "成功", model_to_dict(result, Category)

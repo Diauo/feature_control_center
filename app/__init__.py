@@ -31,9 +31,11 @@ def create_app(config_class='app.config.Config'):
 
     # 初始化数据库
     db.init_app(app)
-    print("="*30)
-    print("")
-    print("初始化完成")
-    print("")
-    print("="*30)
+    with app.app_context():
+        db.create_all()
+
+    # 注册功能扫描模块
+    from app.services.feature_register_service import init_feature_register
+    init_feature_register(app)
+
     return app
