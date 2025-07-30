@@ -2,6 +2,14 @@ from app import db
 from sqlalchemy import text
 from app.models.base_models import Feature
 from app.util.serviceUtil import model_to_dict
+import importlib.util
+import os
+from app.services import feature_service, config_service
+from app.util.log_utils import logger
+from app.util.feature_execution_context import FeatureExecutionContext
+from flask import current_app
+import threading
+import time
 
 def get_all_feature():
     sql = text('''
@@ -84,3 +92,72 @@ def delete_feature(feature_id):
     db.session.delete(feature)
     db.session.commit()
     return True, "删除成功"
+
+def get_feature_by_id(feature_id):
+    """
+    根据功能ID获取功能信息
+    :param feature_id: 功能ID
+    :return: (bool, str, dict) 是否成功，提示信息，功能数据
+    """
+    feature = Feature.query.get(feature_id)
+    if not feature:
+        return False, f"未找到ID为[{feature_id}]的功能", None
+    return True, "成功", feature.to_dict()
+
+def execute_feature(feature_id, client_id):
+    # 1. 查询功能信息
+    ok, msg, feature = feature_service.get_feature_by_id(feature_id)
+    if not ok:
+        return False, f"查询功能失败: {msg}", None
+
+    # 2. 从flask的config中获取功能目录路径
+    feature_dir = current_app.config.get('FEATURE_DIR')
+    if not feature_dir:
+        # 默认路径
+        feature_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../features"))
+
+    # 3. 拼接脚本路径
+    script_path = os.path.join(feature_dir, feature.get('feature_file_name', ''))
+    if not os.path.isfile(script_path):
+        return False, f"功能脚本不存在: {script_path}", None
+
+    # 4. 动态加载并异步执行 run()
+    app = current_app._get_current_object()
+    def run_feature_script():
+        with app.app_context():
+            ctx = FeatureExecutionContext(client_id, feature.get("name"))
+            try:
+                spec = importlib.util.spec_from_file_location("feature_module", script_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                if not hasattr(module, "run"):
+                    ctx.log(f"{feature.get('name', '未知功能')} 功能脚本缺少 run() 方法，不符合规范", "error", False)
+                    ctx.error(f"{feature.get('name', '未知功能')} 功能脚本缺少 run() 方法，不符合规范")
+                    return
+                config = config_service.get_config_by_feature_id(feature_id)
+                config_dict = {c['name']: c['default_value'] for c in config[2]} if config[0] else {}
+                if not config_dict:
+                    config_dict = {}
+                # 如果配置中存在为空的值，也没有默认值，则认为是无效配置，指出没有值的配置，报错并结束
+                if not all(v is not None for v in config_dict.values()):
+                    missing_configs = [k for k, v in config_dict.items() if v is None]
+                    ctx.log(f"{feature.get('name', '未知功能')} 功能脚本配置无效，缺少值的配置: {missing_configs}", "error", False)
+                    ctx.error(f"{feature.get('name', '未知功能')} 功能脚本配置无效，缺少值的配置: {missing_configs}")
+                    return
+                # 等待一秒后执行
+                time.sleep(1)
+                status, msg, data = module.run(config_dict, ctx)
+                if status:
+                    ctx.log("功能执行成功")
+                    ctx.done(msg, data)
+                else:
+                    ctx.log(f"功能执行失败: {msg}", "error", False)
+                    ctx.error(msg, data)
+            except Exception as e:
+                ctx.log(f"执行异常：{e}", "error", False)
+                ctx.error(str(e))
+
+    t = threading.Thread(target=run_feature_script)
+    t.start()
+
+    return True, "功能已启动，日志和结果将通过WebSocket实时推送", None

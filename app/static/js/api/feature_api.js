@@ -4,6 +4,9 @@ const feature_api = {
   },
   get_feature_by_customer_id(id) {
     return axios.get('/api/feat/get_feature_by_customer_id?customer_id=' + id);
+  },
+  execute_feature(id, clientId) {
+    return axios.post('/api/feat/execute', {"feature_id": id, "client_id": clientId });
   }
 };
 

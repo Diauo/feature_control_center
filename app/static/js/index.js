@@ -295,14 +295,66 @@ createApp({
 
         // 运行功能
         const runFeature = () => {
+            // 如果正在运行，则退出
+            if (featureRunning.value) {
+                addConsoleLog(`功能 ${activeFeature.value.name} 已在运行中，请等待完成`, 'warn')
+                addNotification(`功能 ${activeFeature.value.name} 已在运行中，请等待完成`)
+                return
+            }
+
             featureRunning.value = true
-            addConsoleLog(`开始运行${activeFeature.value.name}...`, 'info')
 
-            // 模拟WebSocket接收到的日志
-            simulateConsoleOutput()
+            // 生成唯一 client_id
+            let clientId = crypto.randomUUID();
 
-            // 添加通知
-            addNotification(`${activeFeature.value.name}已开始运行`)
+            // 连接到 WebSocket 服务
+            let socket = io('/feature')
+            socket.on('connect', () => {
+                console.log("✅ WebSocket 已连接")
+                socket.emit('register', { client_id: clientId })  // 注册身份
+                // 调用API执行功能
+                api.feature.execute_feature(activeFeature.value.id, clientId).then(response => {
+                    debugger;
+                    const data = response.data
+                    if (data.status) {
+                        addConsoleLog(`功能 ${activeFeature.value.name} 执行中`, 'info')
+                    } else {
+                        addConsoleLog(`功能 ${activeFeature.value.name} 执行失败: ${data.data}`, 'error')
+                        addNotification(`功能 ${activeFeature.value.name} 执行失败`)
+                        featureRunning.value = false
+                        socket.disconnect()
+                    }
+                }).catch(error => {
+                    addConsoleLog(`功能 ${activeFeature.value.name} 执行异常: ${error.message}`, 'error')
+                    addNotification(`功能 ${activeFeature.value.name} 执行异常`)
+                    featureRunning.value = false
+                    socket.disconnect()
+                })
+            })
+
+            // 接收日志消息
+            socket.on('log', (data) => {
+                addConsoleLog(data.message, 'info')  // 追加日志到控制台区域
+            })
+
+            socket.on('disconnect', () => {
+                featureRunning.value = false
+                console.log("❎ WebSocket 已断开连接")
+            })
+
+            socket.on('feature_done', (data) => {
+                featureRunning.value = false
+                if (data.status === 'success') {
+                    addConsoleLog(`完成： ${data.msg}`, 'info')
+                    addNotification(`${activeFeature.value.name} 执行成功`)
+                } else {
+                    addConsoleLog(`失败：${data.msg}`, 'error')
+                    addNotification(`${activeFeature.value.name} 执行失败`)
+                }
+                socket.disconnect()
+            })
+
+
         }
 
         // 停止功能

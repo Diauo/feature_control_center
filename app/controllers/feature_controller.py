@@ -33,3 +33,17 @@ def get_feature_by_category_tags_id():
         return msg, 500
     else:
         return jsonify(data), 200
+    
+@feature_bp.route('/execute', methods=['POST'])
+def execute():
+    feature_id = request.json.get('feature_id')
+    if not feature_id:
+        return "缺少参数 feature_id", 400
+    client_id = request.json.get('client_id')
+    if not client_id:
+        return "缺少参数 client_id", 400
+    status, msg, _ = feature_service.execute_feature(feature_id, client_id)
+    if not status:
+        return msg, 500
+    else:
+        return "执行成功", 200

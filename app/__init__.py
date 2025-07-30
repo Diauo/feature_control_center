@@ -1,6 +1,7 @@
 from flask import Flask
 from app.middlewares import *
 
+from .ws_server import socketio
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -38,4 +39,9 @@ def create_app(config_class='app.config.Config'):
     from app.services.feature_register_service import init_feature_register
     init_feature_register(app)
 
+        
     return app
+
+def run_with_socketio(app):
+    socketio.init_app(app)
+    socketio.run(app, host="0.0.0.0", port=5000)
