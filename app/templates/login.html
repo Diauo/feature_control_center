@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能管理面板 - 登录</title>
+    <script src="[| url_for('static', filename='js/vue.global.min.js') |]"></script>
+    <script src="[| url_for('static', filename='js/axios.min.js') |]"></script>
+    <link rel="stylesheet" href="[| url_for('static', filename='css/index.css') |]">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            border-color: #409eff;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background-color: #409eff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .btn-login:hover {
+            background-color: #66b1ff;
+        }
+        .btn-login:disabled {
+            background-color: #a0cfff;
+            cursor: not-allowed;
+        }
+        .error-message {
+            color: #f56c6c;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="login-container">
+            <div class="login-card">
+                <h2>功能管理面板</h2>
+                <form @submit.prevent="handleLogin">
+                    <div class="form-group">
+                        <label for="username">用户名</label>
+                        <input 
+                            type="text" 
+                            id="username" 
+                            v-model="loginForm.username" 
+                            placeholder="请输入用户名" 
+                            required
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input 
+                            type="password" 
+                            id="password" 
+                            v-model="loginForm.password" 
+                            placeholder="请输入密码" 
+                            required
+                        >
+                    </div>
+                    <button 
+                        type="submit" 
+                        class="btn-login" 
+                        :disabled="loading"
+                    >
+                        <span v-if="loading" class="loading"></span>
+                        {{ loading ? '登录中...' : '登录' }}
+                    </button>
+                    <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="[| url_for('static', filename='js/login.js') |]"></script>
+</body>
+</html>

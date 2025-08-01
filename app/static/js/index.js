@@ -2,6 +2,7 @@
 const { createApp, ref, computed, onMounted, provide, nextTick } = Vue
 import api from './api/api.js';
 import SidebarMenu from './defineComponent.js';
+import authService from './services/authService.js';
 
 createApp({
     setup() {
@@ -21,12 +22,35 @@ createApp({
         const categories = ref([])          // 所有分类
         const categoriesReferenceMap = new Map()          // 分类映射Map
         const features = ref([]);           // 所有功能
+        const currentUser = ref(null);      // 当前用户信息
 
+        // 检查用户是否已认证
         onMounted(async () => {
+            // 检查认证状态
+            if (!authService.isAuthenticated()) {
+                // 未认证，重定向到登录页面
+                window.location.href = '/login';
+                return;
+            }
+            
+            // 检查令牌是否过期
+            if (authService.isTokenExpired()) {
+                // 尝试刷新令牌
+                const refreshSuccess = await authService.refreshAccessToken();
+                if (!refreshSuccess) {
+                    // 刷新失败，重定向到登录页面
+                    window.location.href = '/login';
+                    return;
+                }
+            }
+            
+            // 获取当前用户信息
+            currentUser.value = authService.getCurrentUser();
+            
             // 获取所有功能
             let response = await api.feature.get_all_feature();
             features.value = response.data.data;
-            // 获取所有客户 
+            // 获取所有客户
             response = await api.customer.get_all_customer();
             customers.value = response.data.data;
             // 获取所有分类
@@ -446,6 +470,21 @@ createApp({
         // connectWebSocket()
 
         provide('openAddCategoryModal', openAddCategoryModal);
+        // 用户登出
+        const logout = async () => {
+            try {
+                // 调用后端登出接口
+                await api.user.logout();
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                // 清除本地令牌
+                authService.clearTokens();
+                // 重定向到登录页面
+                window.location.href = '/login';
+            }
+        };
+
         provide('toggleCategory', toggleCategory);
         provide('toggleCategoryEdite', toggleCategoryEdite);
         provide('categorieEditMode', categorieEditMode);
@@ -466,6 +505,7 @@ createApp({
             currentCustomer,
             filteredCategories,
             getCurrentClientName,
+            currentUser,
             toggleCategory,
             selectCategory,
             openFeatureWindow,
@@ -481,6 +521,7 @@ createApp({
             modalWindow,
             openModal,
             closeModal,
+            logout
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

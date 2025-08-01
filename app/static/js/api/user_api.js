@@ -1,4 +1,5 @@
-import axios from 'axios';
+// axios is included via script tag, so we use the global axios object
+const axios = window.axios;
 
 export default {
   /**
@@ -7,7 +8,7 @@ export default {
    * @returns {Promise}
    */
   login(credentials) {
-    return axios.post('/api/users/login', credentials);
+    return axios.post('/users/login', credentials);
   },
 
   /**
@@ -16,7 +17,7 @@ export default {
    * @returns {Promise}
    */
   register(userData) {
-    return axios.post('/api/users/register', userData);
+    return axios.post('/users/register', userData);
   },
 
   /**
@@ -24,7 +25,7 @@ export default {
    * @returns {Promise}
    */
   logout() {
-    return axios.post('/api/users/logout');
+    return axios.post('/users/logout');
   },
 
   /**
@@ -33,7 +34,7 @@ export default {
    * @returns {Promise}
    */
   refreshTokens(refreshToken) {
-    return axios.post('/api/users/refresh', { refresh_token: refreshToken });
+    return axios.post('/users/refresh', { refresh_token: refreshToken });
   },
 
   /**
@@ -41,7 +42,7 @@ export default {
    * @returns {Promise}
    */
   getCurrentUser() {
-    return axios.get('/api/users/me');
+    return axios.get('/users/me');
   },
 
   /**
@@ -51,7 +52,7 @@ export default {
   getMyCustomers() {
     // 这个API需要在后端实现
     // 暂时返回一个模拟的实现
-    return axios.get('/api/users/me/customers');
+    return axios.get('/users/me/customers');
   },
 
   /**
@@ -60,7 +61,7 @@ export default {
    * @returns {Promise}
    */
   getUsers(params) {
-    return axios.get('/api/users/list', { params });
+    return axios.get('/users/list', { params });
   },
 
   /**
@@ -78,7 +79,7 @@ export default {
    * @returns {Promise}
    */
   createUser(userData) {
-    return axios.post('/api/users/', userData);
+    return axios.post('/users/', userData);
   },
 
   /**
