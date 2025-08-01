@@ -1,5 +1,6 @@
 from flask import Flask
 from app.middlewares import *
+from flask_jwt_extended import JWTManager
 
 from .ws_server import socketio
 from flask_sqlalchemy import SQLAlchemy
@@ -14,6 +15,21 @@ def create_app(config_class='app.config.Config'):
     app.jinja_env.variable_start_string = "[|"
     app.jinja_env.variable_end_string = "|]"
 
+    # 初始化JWT
+    jwt = JWTManager(app)
+    
+    # 注册JWT错误处理
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return 'Token已过期', 401
+
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return '无效的Token', 401
+
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return '缺少Token', 401
 
     # 注册蓝图
     from app.controllers.index_controller import index_bp
@@ -24,11 +40,14 @@ def create_app(config_class='app.config.Config'):
     app.register_blueprint(customer_bp, url_prefix='/api/cust')
     from app.controllers.category_controller import category_bp
     app.register_blueprint(category_bp, url_prefix='/api/cate')
+    from app.controllers.user_controller import user_bp
+    app.register_blueprint(user_bp)
 
-    # 注册中间件    
+    # 注册中间件
     log_request(app)
+    jwt_middleware(app)
     global_result_format(app)
-    exception_handler(app)
+    app_exception_handler(app)
 
     # 初始化数据库
     db.init_app(app)
