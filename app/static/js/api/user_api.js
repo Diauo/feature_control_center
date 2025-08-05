@@ -1,14 +1,13 @@
-// axios is included via script tag, so we use the global axios object
-const axios = window.axios;
+import api from './api.js';
 
-export default {
+const user_api = {
   /**
    * 用户登录
    * @param {Object} credentials - 登录凭据 {username, password}
    * @returns {Promise}
    */
   login(credentials) {
-    return axios.post('/users/login', credentials);
+    return api.client.post('/users/login', credentials);
   },
 
   /**
@@ -17,7 +16,7 @@ export default {
    * @returns {Promise}
    */
   register(userData) {
-    return axios.post('/users/register', userData);
+    return api.client.post('/users/register', userData);
   },
 
   /**
@@ -25,7 +24,7 @@ export default {
    * @returns {Promise}
    */
   logout() {
-    return axios.post('/users/logout');
+    return api.client.post('/users/logout');
   },
 
   /**
@@ -34,7 +33,7 @@ export default {
    * @returns {Promise}
    */
   refreshTokens(refreshToken) {
-    return axios.post('/users/refresh', { refresh_token: refreshToken });
+    return api.client.post('/users/refresh', { refresh_token: refreshToken });
   },
 
   /**
@@ -42,7 +41,7 @@ export default {
    * @returns {Promise}
    */
   getCurrentUser() {
-    return axios.get('/users/me');
+    return api.client.get('/users/me');
   },
 
   /**
@@ -52,7 +51,7 @@ export default {
   getMyCustomers() {
     // 这个API需要在后端实现
     // 暂时返回一个模拟的实现
-    return axios.get('/users/me/customers');
+    return api.client.get('/users/me/customers');
   },
 
   /**
@@ -61,7 +60,7 @@ export default {
    * @returns {Promise}
    */
   getUsers(params) {
-    return axios.get('/users/list', { params });
+    return api.client.get('/users/list', { params });
   },
 
   /**
@@ -70,7 +69,7 @@ export default {
    * @returns {Promise}
    */
   getUser(userId) {
-    return axios.get(`/api/users/${userId}`);
+    return api.client.get(`/users/${userId}`);
   },
 
   /**
@@ -79,7 +78,7 @@ export default {
    * @returns {Promise}
    */
   createUser(userData) {
-    return axios.post('/users/', userData);
+    return api.client.post('/users/', userData);
   },
 
   /**
@@ -89,7 +88,7 @@ export default {
    * @returns {Promise}
    */
   updateUser(userId, userData) {
-    return axios.put(`/api/users/${userId}`, userData);
+    return api.client.put(`/users/${userId}`, userData);
   },
 
   /**
@@ -98,6 +97,8 @@ export default {
    * @returns {Promise}
    */
   deleteUser(userId) {
-    return axios.delete(`/api/users/${userId}`);
+    return api.client.delete(`/users/${userId}`);
   }
 };
+
+export default user_api;

@@ -93,7 +93,6 @@ def refresh():
 
 
 @user_bp.route('/logout', methods=['POST'])
-@jwt_required()
 def logout():
     """用户登出"""
     # 在实际应用中，可能需要将令牌加入黑名单
@@ -102,7 +101,6 @@ def logout():
 
 
 @user_bp.route('/me', methods=['GET'])
-@jwt_required()
 def get_current_user():
     """获取当前用户信息"""
     current_user_id = get_jwt_identity()
@@ -116,7 +114,6 @@ def get_current_user():
 
 
 @user_bp.route('/list', methods=['GET'])
-@jwt_required()
 @require_role('admin')
 def list_users():
     """获取用户列表"""
@@ -138,7 +135,6 @@ def list_users():
 
 
 @user_bp.route('/<int:user_id>', methods=['GET'])
-@jwt_required()
 @require_role('admin')
 def get_user(user_id):
     """获取用户详情"""
@@ -151,7 +147,6 @@ def get_user(user_id):
 
 
 @user_bp.route('/', methods=['POST'])
-@jwt_required()
 @require_role('admin')
 def create_user():
     """创建用户"""
@@ -177,7 +172,6 @@ def create_user():
 
 
 @user_bp.route('/<int:user_id>', methods=['PUT'])
-@jwt_required()
 @require_role('admin')
 def update_user_endpoint(user_id):
     """更新用户"""
@@ -193,7 +187,6 @@ def update_user_endpoint(user_id):
 
 
 @user_bp.route('/<int:user_id>', methods=['DELETE'])
-@jwt_required()
 @require_role('admin')
 def delete_user(user_id):
     """删除用户"""
