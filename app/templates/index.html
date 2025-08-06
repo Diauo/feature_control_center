@@ -43,6 +43,9 @@
             <!-- 首页 -->
             <div v-if="currentPage === 'home'">
                 <h2>功能列表</h2>
+                <div class="feature-actions" v-if="currentUser && currentUser.role === 'admin'">
+                    <button class="btn-primary" @click="openRegisterFeatureModal">注册新功能</button>
+                </div>
                 <div class="features-grid">
                     <div class="sidebar-container">
                     <div class="sidebar">
@@ -241,6 +244,53 @@
                         {{ button.label }} </button>
                 </div>
                 <button id="modal-button-cancel" class="btn-cancel" @click="closeModal">取消</button>
+            </div>
+        </div>
+
+        <!-- 功能注册模态框 -->
+        <div class="modal" v-if="registerFeatureModal.show">
+            <div class="modal-content">
+                <h3>注册新功能</h3>
+                <form @submit.prevent="registerFeature">
+                    <div class="form-group">
+                        <label>功能脚本文件:</label>
+                        <input type="file" @change="handleFileUpload" accept=".py" required>
+                    </div>
+                    
+                    <div v-if="registerFeatureModal.metaData">
+                        <div class="form-group">
+                            <label>功能名称:</label>
+                            <input type="text" v-model="registerFeatureModal.metaData.name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>功能描述:</label>
+                            <textarea v-model="registerFeatureModal.metaData.description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>所属客户:</label>
+                            <select v-model="registerFeatureModal.metaData.customer_id" required>
+                                <option value="">请选择客户</option>
+                                <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+                                    {{ customer.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>所属分类:</label>
+                            <select v-model="registerFeatureModal.metaData.category_id">
+                                <option value="0">无分类</option>
+                                <option v-for="category in categories" :key="category.id" :value="category.id">
+                                    {{ category.name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary" :disabled="!registerFeatureModal.metaData">注册</button>
+                        <button type="button" class="btn-secondary" @click="closeRegisterFeatureModal">取消</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

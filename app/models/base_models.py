@@ -24,6 +24,10 @@ class Base_model(db.Model):
         return f"<{name}>"
     
     def to_dict(self):
+        """
+        将模型实例转换为字典
+        :return: 字典表示的模型数据
+        """
         data = {}
         for column in self.__table__.columns:
             data[column.name] = getattr(self, column.name)

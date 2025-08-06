@@ -9,6 +9,13 @@ const feature_api = {
   },
   execute_feature(id, clientId) {
     return api.client.post('/feat/execute', {"feature_id": id, "client_id": clientId });
+  },
+  register_feature(formData) {
+    return api.client.post('/feat/register', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
 };
 

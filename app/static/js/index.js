@@ -37,6 +37,13 @@ createApp({
                 feature_id: 0
             }
         });
+        
+        // 功能注册相关数据
+        const registerFeatureModal = ref({
+            show: false,
+            metaData: null,
+            file: null
+        });
 
         // 检查用户是否已认证
         onMounted(async () => {
@@ -670,6 +677,124 @@ createApp({
                 addNotification('清理无效配置时发生错误: ' + error.message);
             }
         };
+        
+        // 功能注册相关方法
+        // 打开注册功能模态框
+        const openRegisterFeatureModal = () => {
+            // 检查用户是否有管理员权限
+            if (!currentUser.value || currentUser.value.role !== 'admin') {
+                addNotification('权限不足：只有管理员可以注册功能');
+                return;
+            }
+            
+            registerFeatureModal.value.show = true;
+        };
+        
+        // 关闭注册功能模态框
+        const closeRegisterFeatureModal = () => {
+            registerFeatureModal.value.show = false;
+            registerFeatureModal.value.metaData = null;
+            registerFeatureModal.value.file = null;
+        };
+        
+        // 处理文件上传
+        const handleFileUpload = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 检查文件类型
+            if (!file.name.endsWith('.py')) {
+                addNotification('请选择Python文件(.py)');
+                return;
+            }
+            
+            registerFeatureModal.value.file = file;
+            
+            // 读取文件内容并解析元数据
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const content = e.target.result;
+                try {
+                    // 解析元数据
+                    const metaData = parsePythonMetaData(content);
+                    registerFeatureModal.value.metaData = metaData;
+                } catch (error) {
+                    console.error('解析元数据失败:', error);
+                    addNotification('解析元数据失败: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        };
+        
+        // 解析Python文件中的元数据
+        const parsePythonMetaData = (content) => {
+            // 使用正则表达式提取__meta__字典
+            const metaRegex = /__meta__\s*=\s*({[\s\S]*?})\s*\n\s*\n/;
+            const match = content.match(metaRegex);
+            
+            if (!match) {
+                throw new Error('未找到__meta__元数据');
+            }
+            
+            // 简单解析元数据（实际项目中可能需要更复杂的解析）
+            const metaStr = match[1];
+            // 这里我们使用一个简化的解析方法
+            // 在实际项目中，你可能需要使用更安全的解析方法
+            try {
+                // 替换一些Python特有的语法为JavaScript可解析的格式
+                const normalizedMetaStr = metaStr
+                    .replace(/'/g, '"')  // 单引号替换为双引号
+                    .replace(/(\w+):/g, '"$1":')  // 为键添加双引号
+                    .replace(/\(\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\)/g, '["$1", "$2"]')  // 将元组转换为数组
+                    .replace(/,\s*}/g, '}')  // 移除末尾的逗号
+                    .replace(/,\s*]/g, ']');  // 移除末尾的逗号
+                
+                const metaData = JSON.parse(normalizedMetaStr);
+                
+                // 添加客户和分类字段
+                metaData.customer_id = 0;  // 默认值
+                metaData.category_id = 0;  // 默认值
+                
+                return metaData;
+            } catch (error) {
+                console.error('解析元数据失败:', error);
+                throw new Error('元数据格式不正确: ' + error.message);
+            }
+        };
+        
+        // 注册功能
+        const registerFeature = async () => {
+            if (!registerFeatureModal.value.file || !registerFeatureModal.value.metaData) {
+                addNotification('请先选择功能脚本文件');
+                return;
+            }
+            
+            try {
+                // 创建FormData对象
+                const formData = new FormData();
+                formData.append('file', registerFeatureModal.value.file);
+                formData.append('metaData', JSON.stringify(registerFeatureModal.value.metaData));
+                
+                // 调用API注册功能
+                const response = await api.feature.register_feature(formData);
+                
+                if (response.data.status) {
+                    addNotification(response.data.message || '功能注册成功');
+                    closeRegisterFeatureModal();
+                    
+                    // 重新加载功能列表
+                    const featureResponse = await api.feature.get_all_feature();
+                    if (featureResponse.data.status) {
+                        features.value = featureResponse.data.data;
+                    }
+                } else {
+                    addNotification(response.data.message || '功能注册失败: ' + response.data.data);
+                }
+            } catch (error) {
+                console.error('注册功能时发生错误:', error);
+                addNotification('注册功能时发生错误: ' + error.message);
+            }
+        };
 
         provide('openAddCategoryModal', openAddCategoryModal);
         // 用户登出
@@ -734,7 +859,13 @@ createApp({
             saveConfig,
             deleteConfig,
             reloadConfig,
-            cleanupConfig
+            cleanupConfig,
+            // 功能注册相关方法
+            registerFeatureModal,
+            openRegisterFeatureModal,
+            closeRegisterFeatureModal,
+            handleFileUpload,
+            registerFeature
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

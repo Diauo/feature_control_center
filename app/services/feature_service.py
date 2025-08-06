@@ -161,3 +161,43 @@ def execute_feature(feature_id, client_id):
     t.start()
 
     return True, "功能已启动，日志和结果将通过WebSocket实时推送", None
+
+def register_feature(file, meta_data):
+    """
+    注册新功能
+    :param file: 上传的功能脚本文件
+    :param meta_data: 功能元数据
+    :return: (bool, str) 是否成功，提示信息
+    """
+    try:
+        from flask import current_app
+        import os
+        from app.util.log_utils import logger
+        
+        # 1. 获取功能目录路径
+        feature_dir = current_app.config.get('FEATURE_DIR')
+        if not feature_dir:
+            # 默认路径
+            feature_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../features"))
+        
+        # 2. 确保目录存在
+        os.makedirs(feature_dir, exist_ok=True)
+        
+        # 3. 生成文件名
+        filename = file.filename
+        if not filename.endswith('.py'):
+            filename += '.py'
+        
+        # 4. 保存文件
+        file_path = os.path.join(feature_dir, filename)
+        file.save(file_path)
+        
+        # 5. 调用功能注册服务注册该文件
+        from app.services.feature_register_service import scan_and_register_features
+        scan_and_register_features()
+        
+        logger.info(f"功能文件 {filename} 注册成功")
+        return True, "功能注册成功"
+    except Exception as e:
+        logger.error(f"功能注册失败: {e}")
+        return False, f"功能注册失败: {str(e)}"

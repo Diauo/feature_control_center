@@ -48,3 +48,31 @@ def execute():
         return Result.error(msg, 500)
     else:
         return Result.success(None, "执行成功")
+
+@feature_bp.route('/register', methods=['POST'])
+def register_feature():
+    from app.services import feature_service
+    from app.util.result import Result
+    
+    # 获取上传的文件
+    file = request.files.get('file')
+    if not file:
+        return Result.bad_request("缺少文件参数")
+    
+    # 获取元数据
+    meta_data_str = request.form.get('metaData')
+    if not meta_data_str:
+        return Result.bad_request("缺少元数据参数")
+    
+    try:
+        import json
+        meta_data = json.loads(meta_data_str)
+    except Exception as e:
+        return Result.bad_request("元数据格式不正确")
+    
+    # 调用服务注册功能
+    status, msg = feature_service.register_feature(file, meta_data)
+    if not status:
+        return Result.error(msg, 500)
+    else:
+        return Result.success(None, "功能注册成功")
