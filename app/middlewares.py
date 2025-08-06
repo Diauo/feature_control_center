@@ -14,13 +14,18 @@ JWT_WHITELIST = [
     ('/api/users/register', 'POST'),
     ('/api/users/refresh', 'POST'),
     ('/', 'GET'),
+    ('/login', 'GET'),
     ('/favicon.ico', 'GET'),
-    ('/static', 'GET'),
+    ('/static/*', 'GET'),
 ]
 
 def is_in_whitelist(path, method):
     for rule, m in JWT_WHITELIST:
-        if path.startswith(rule) and method == m:
+        # 精确匹配路径和方法
+        if path == rule and method == m:
+            return True
+        # 通配符匹配
+        if rule.endswith('/*') and path.startswith(rule[:-1]) and method == m:
             return True
     return False
 
@@ -29,7 +34,6 @@ def jwt_middleware(app):
     def check_jwt():
         if is_in_whitelist(request.path, request.method):
             return  # 跳过校验
-        
         try:
             # 验证JWT令牌
             verify_jwt_in_request()
@@ -61,13 +65,33 @@ def require_role(required_role):
     """
     from functools import wraps
     from flask import request
+    from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, get_jwt
+    from app.services.user_service import get_user_by_id
     
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # 检查用户是否已认证
+            # 检查是否已经设置了用户信息
             if not hasattr(request, 'current_user') or not hasattr(request, 'user_role'):
-                return '未认证', 401
+                try:
+                    # 主动执行JWT验证
+                    verify_jwt_in_request()
+                    
+                    # 获取用户ID和角色
+                    user_id = get_jwt_identity()
+                    claims = get_jwt()
+                    role = claims.get('role')
+                    
+                    # 获取用户信息
+                    user = get_user_by_id(int(user_id))
+                    if not user or not user.is_active:
+                        return '用户不存在或已被禁用', 401
+                    
+                    # 将用户信息添加到请求上下文
+                    request.current_user = user
+                    request.user_role = role
+                except Exception as e:
+                    return f'认证失败: {str(e)}', 401
             
             # 检查角色权限
             user_role = request.user_role
@@ -94,13 +118,33 @@ def require_customer_access():
     """
     from functools import wraps
     from flask import request
+    from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity, get_jwt
+    from app.services.user_service import get_user_by_id, is_user_associated_with_customer
     
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # 检查用户是否已认证
+            # 检查是否已经设置了用户信息
             if not hasattr(request, 'current_user') or not hasattr(request, 'user_role'):
-                return '未认证', 401
+                try:
+                    # 主动执行JWT验证
+                    verify_jwt_in_request()
+                    
+                    # 获取用户ID和角色
+                    user_id = get_jwt_identity()
+                    claims = get_jwt()
+                    role = claims.get('role')
+                    
+                    # 获取用户信息
+                    user = get_user_by_id(int(user_id))
+                    if not user or not user.is_active:
+                        return '用户不存在或已被禁用', 401
+                    
+                    # 将用户信息添加到请求上下文
+                    request.current_user = user
+                    request.user_role = role
+                except Exception as e:
+                    return f'认证失败: {str(e)}', 401
             
             # 超级管理员可以访问所有客户数据
             if request.user_role == 'admin':
@@ -112,7 +156,6 @@ def require_customer_access():
                 customer_id = request.args.get('customer_id') or (request.json.get('customer_id') if request.json else None)
                 if customer_id:
                     # 检查用户是否关联该客户
-                    from app.services.user_service import is_user_associated_with_customer
                     if not is_user_associated_with_customer(request.current_user.id, customer_id):
                         return '权限不足，无法访问该客户数据', 403
             

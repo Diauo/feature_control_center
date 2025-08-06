@@ -106,6 +106,86 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 系统配置页面 -->
+            <div v-if="currentPage === 'config'">
+                <h2>系统配置管理</h2>
+                <div id="config-management">
+                    <!-- 操作按钮区域 -->
+                    <div class="config-actions" v-if="currentUser && currentUser.role === 'admin'">
+                        <button class="btn-primary" @click="openAddConfigModal">新增配置</button>
+                        <button class="btn-secondary" @click="reloadConfig">重载配置</button>
+                        <button class="btn-warning" @click="cleanupConfig">清理无效配置</button>
+                    </div>
+                    
+                    <!-- 配置列表 -->
+                    <div class="config-list">
+                        <table class="config-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>名称</th>
+                                    <th>值</th>
+                                    <th>默认值</th>
+                                    <th>描述</th>
+                                    <th>关联功能ID</th>
+                                    <th v-if="currentUser && currentUser.role === 'admin'">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="config in configs" :key="config.id">
+                                    <td>{{ config.id }}</td>
+                                    <td>{{ config.name }}</td>
+                                    <td>{{ config.value }}</td>
+                                    <td>{{ config.default_value }}</td>
+                                    <td>{{ config.description }}</td>
+                                    <td>{{ config.feature_id }}</td>
+                                    <td v-if="currentUser && currentUser.role === 'admin'">
+                                        <button class="btn-edit" @click="openEditConfigModal(config)">编辑</button>
+                                        <button class="btn-danger" @click="deleteConfig(config)">删除</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 新增/编辑配置模态框 -->
+                    <div class="modal" v-if="showConfigModal">
+                        <div class="modal-content">
+                            <h3>{{ isEditing ? '编辑配置' : '新增配置' }}</h3>
+                            <form @submit.prevent="saveConfig">
+                                <div class="form-group">
+                                    <label>名称:</label>
+                                    <input type="text" v-model="currentConfig.name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>值:</label>
+                                    <input type="text" v-model="currentConfig.value">
+                                </div>
+                                <div class="form-group">
+                                    <label>默认值:</label>
+                                    <input type="text" v-model="currentConfig.default_value">
+                                </div>
+                                <div class="form-group">
+                                    <label>描述:</label>
+                                    <textarea v-model="currentConfig.description"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>关联功能ID:</label>
+                                    <input type="number" v-model="currentConfig.feature_id" min="0">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-primary">保存</button>
+                                    <button type="button" class="btn-secondary" @click="closeConfigModal">取消</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <!-- 模态框遮罩 -->
+                    <div class="modal-overlay" v-if="showConfigModal" @click="closeConfigModal"></div>
+                </div>
+            </div>
         </div>
 
         <!-- 功能运行窗口 -->

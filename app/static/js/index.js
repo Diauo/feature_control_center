@@ -1,4 +1,3 @@
-
 const { createApp, ref, computed, onMounted, provide, nextTick } = Vue
 import api from './api/api.js';
 import SidebarMenu from './defineComponent.js';
@@ -23,6 +22,20 @@ createApp({
         const categoriesReferenceMap = new Map()          // 分类映射Map
         const features = ref([]);           // 所有功能
         const currentUser = ref(null);      // 当前用户信息
+        
+        // 配置管理相关数据
+        const configs = ref([]);            // 所有配置
+        const configModal = ref({
+            show: false,
+            title: '',
+            mode: 'add', // 'add' 或 'edit'
+            formData: {
+                id: null,
+                key: '',
+                value: '',
+                description: ''
+            }
+        });
 
         // 检查用户是否已认证
         onMounted(async () => {
@@ -58,6 +71,9 @@ createApp({
             categories.value = response.data.data;
             // 构建分类引用映射
             buildCategoryReferenceMap(categories.value);
+            
+            // 加载配置
+            await loadConfigs();
         })
 
         // 构建分类引用映射，用于通过映射直接修改节点
@@ -465,9 +481,177 @@ createApp({
         //         setTimeout(connectWebSocket, 3000)
         //     }
         // }
-
         // 启动WebSocket连接
         // connectWebSocket()
+
+        // 配置管理方法
+        // 加载所有配置
+        const loadConfigs = async () => {
+            try {
+                const response = await api.config.get_all_config();
+                if (response.data.status) {
+                    configs.value = response.data.data;
+                } else {
+                    console.error('加载配置失败:', response.data.data);
+                    addNotification('加载配置失败: ' + response.data.data);
+                }
+            } catch (error) {
+                console.error('加载配置时发生错误:', error);
+                addNotification('加载配置时发生错误: ' + error.message);
+            }
+        };
+
+        // 打开添加配置模态框
+        const openAddConfigModal = () => {
+            // 检查用户是否有管理员权限
+            if (!currentUser.value || currentUser.value.role !== 'admin') {
+                addNotification('权限不足：只有管理员可以添加配置');
+                return;
+            }
+            
+            configModal.value.mode = 'add';
+            configModal.value.title = '添加配置';
+            configModal.value.formData = {
+                id: null,
+                key: '',
+                value: '',
+                description: ''
+            };
+            configModal.value.show = true;
+        };
+
+        // 打开编辑配置模态框
+        const openEditConfigModal = (config) => {
+            // 检查用户是否有管理员权限
+            if (!currentUser.value || currentUser.value.role !== 'admin') {
+                addNotification('权限不足：只有管理员可以编辑配置');
+                return;
+            }
+            
+            configModal.value.mode = 'edit';
+            configModal.value.title = '编辑配置';
+            configModal.value.formData = {
+                id: config.id,
+                key: config.key,
+                value: config.value,
+                description: config.description
+            };
+            configModal.value.show = true;
+        };
+
+        // 关闭配置模态框
+        const closeConfigModal = () => {
+            configModal.value.show = false;
+            configModal.value.formData = {
+                id: null,
+                key: '',
+                value: '',
+                description: ''
+            };
+        };
+
+        // 保存配置
+        const saveConfig = async () => {
+            try {
+                let response;
+                if (configModal.value.mode === 'add') {
+                    // 添加配置
+                    response = await api.config.add_config(configModal.value.formData);
+                } else {
+                    // 编辑配置
+                    response = await api.config.update_config(configModal.value.formData.id, configModal.value.formData);
+                }
+
+                if (response.data.status) {
+                    addNotification(configModal.value.mode === 'add' ? '配置添加成功' : '配置更新成功');
+                    closeConfigModal();
+                    await loadConfigs(); // 重新加载配置
+                } else {
+                    console.error('保存配置失败:', response.data.data);
+                    addNotification('保存配置失败: ' + response.data.data);
+                }
+            } catch (error) {
+                console.error('保存配置时发生错误:', error);
+                addNotification('保存配置时发生错误: ' + error.message);
+            }
+        };
+
+        // 删除配置
+        const deleteConfig = async (id) => {
+            // 检查用户是否有管理员权限
+            if (!currentUser.value || currentUser.value.role !== 'admin') {
+                addNotification('权限不足：只有管理员可以删除配置');
+                return;
+            }
+            
+            if (!confirm('确定要删除这个配置吗？')) {
+                return;
+            }
+
+            try {
+                const response = await api.config.delete_config(id);
+                if (response.data.status) {
+                    addNotification('配置删除成功');
+                    await loadConfigs(); // 重新加载配置
+                } else {
+                    console.error('删除配置失败:', response.data.data);
+                    addNotification('删除配置失败: ' + response.data.data);
+                }
+            } catch (error) {
+                console.error('删除配置时发生错误:', error);
+                addNotification('删除配置时发生错误: ' + error.message);
+            }
+        };
+
+        // 重新加载配置
+        const reloadConfig = async () => {
+            // 检查用户是否有管理员权限
+            if (!currentUser.value || currentUser.value.role !== 'admin') {
+                addNotification('权限不足：只有管理员可以重载配置');
+                return;
+            }
+            
+            try {
+                const response = await api.config.reload();
+                if (response.data.status) {
+                    await loadConfigs(); // 重新加载配置
+                    addNotification('配置已重新加载');
+                } else {
+                    console.error('重载配置失败:', response.data.data);
+                    addNotification('重载配置失败: ' + response.data.data);
+                }
+            } catch (error) {
+                console.error('重载配置时发生错误:', error);
+                addNotification('重载配置时发生错误: ' + error.message);
+            }
+        };
+
+        // 清理无效配置
+        const cleanupConfig = async () => {
+            // 检查用户是否有管理员权限
+            if (!currentUser.value || currentUser.value.role !== 'admin') {
+                addNotification('权限不足：只有管理员可以清理配置');
+                return;
+            }
+            
+            if (!confirm('确定要清理无效配置吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const response = await api.config.cleanup();
+                if (response.data.status) {
+                    addNotification('无效配置清理成功');
+                    await loadConfigs(); // 重新加载配置
+                } else {
+                    console.error('清理无效配置失败:', response.data.data);
+                    addNotification('清理无效配置失败: ' + response.data.data);
+                }
+            } catch (error) {
+                console.error('清理无效配置时发生错误:', error);
+                addNotification('清理无效配置时发生错误: ' + error.message);
+            }
+        };
 
         provide('openAddCategoryModal', openAddCategoryModal);
         // 用户登出
@@ -521,7 +705,18 @@ createApp({
             modalWindow,
             openModal,
             closeModal,
-            logout
+            logout,
+            // 配置管理相关方法
+            configs,
+            configModal,
+            loadConfigs,
+            openAddConfigModal,
+            openEditConfigModal,
+            closeConfigModal,
+            saveConfig,
+            deleteConfig,
+            reloadConfig,
+            cleanupConfig
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');
