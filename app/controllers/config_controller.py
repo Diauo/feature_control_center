@@ -2,25 +2,11 @@ from flask import Blueprint, jsonify, request
 from app.services import config_service
 from app.models.base_models import Config
 from app.middlewares import require_role
+from app.util.result import Result
 import logging
 
 config_bp = Blueprint('config', __name__)
 
-def format_response(success, data, code=200):
-    """格式化响应数据"""
-    return jsonify({
-        "status": success,
-        "code": code,
-        "data": data
-    }), code if code != 200 else 200
-
-def format_error_response(message, code=500):
-    """格式化错误响应数据"""
-    return jsonify({
-        "status": False,
-        "code": code,
-        "data": message
-    }), code
 
 def validate_config_data(data):
     """验证配置数据"""
@@ -40,12 +26,12 @@ def get_all_config():
         status, msg, data = config_service.get_all_config()
         if not status:
             logging.error(f"获取配置列表失败: {msg}")
-            return format_error_response(msg, 500)
+            return Result.error(msg, 500)
         else:
-            return jsonify(data), 200
+            return Result.success(data)
     except Exception as e:
         logging.error(f"获取配置列表异常: {str(e)}")
-        return format_error_response(f"获取配置列表失败: {str(e)}", 500)
+        return Result.error(f"获取配置列表失败: {str(e)}", 500)
 
 @config_bp.route('/add_config', methods=['POST'])
 @require_role('admin')
@@ -54,12 +40,12 @@ def add_config():
     try:
         request_body = request.get_json()
         if request_body is None:
-            return "没有有效的参数", 400
+            return Result.bad_request("没有有效的参数")
         
         # 验证数据
         is_valid, message = validate_config_data(request_body)
         if not is_valid:
-            return message, 400
+            return Result.bad_request(message)
         
         # 创建配置对象
         config = Config(**request_body)
@@ -68,13 +54,13 @@ def add_config():
         status, msg, data = config_service.add_config(config)
         if not status:
             logging.error(f"添加配置失败: {msg}")
-            return format_error_response(msg, 500)
+            return Result.error(msg, 500)
         else:
             logging.info(f"成功添加配置: {config.name}")
-            return format_response(True, data), 200
+            return Result.success(data)
     except Exception as e:
         logging.error(f"添加配置异常: {str(e)}")
-        return format_error_response(f"添加配置失败: {str(e)}", 500)
+        return Result.error(f"添加配置失败: {str(e)}", 500)
 
 @config_bp.route('/update_config/<int:config_id>', methods=['PUT'])
 @require_role('admin')
@@ -83,19 +69,19 @@ def update_config(config_id):
     try:
         request_body = request.get_json()
         if request_body is None:
-            return "没有有效的参数", 400
+            return Result.bad_request("没有有效的参数")
         
         # 调用服务层更新配置
         status, msg, data = config_service.update_config(config_id, request_body)
         if not status:
             logging.error(f"更新配置失败: {msg}")
-            return format_error_response(msg, 500)
+            return Result.error(msg, 500)
         else:
             logging.info(f"成功更新配置: {data.get('name', '未知')}")
-            return format_response(True, data), 200
+            return Result.success(data)
     except Exception as e:
         logging.error(f"更新配置异常: {str(e)}")
-        return format_error_response(f"更新配置失败: {str(e)}", 500)
+        return Result.error(f"更新配置失败: {str(e)}", 500)
 
 @config_bp.route('/delete_config/<int:config_id>', methods=['DELETE'])
 @require_role('admin')
@@ -106,13 +92,13 @@ def delete_config(config_id):
         status, msg, data = config_service.delete_config(config_id)
         if not status:
             logging.error(f"删除配置失败: {msg}")
-            return format_error_response(msg, 500)
+            return Result.error(msg, 500)
         else:
             logging.info(f"成功删除配置: {config_id}")
-            return format_response(True, msg), 200
+            return Result.success(msg)
     except Exception as e:
         logging.error(f"删除配置异常: {str(e)}")
-        return format_error_response(f"删除配置失败: {str(e)}", 500)
+        return Result.error(f"删除配置失败: {str(e)}", 500)
 
 @config_bp.route('/reload', methods=['POST'])
 @require_role('admin')
@@ -123,13 +109,13 @@ def reload_config():
         status, msg, data = config_service.reload_config()
         if not status:
             logging.error(f"重载配置失败: {msg}")
-            return format_error_response(msg, 500)
+            return Result.error(msg, 500)
         else:
             logging.info("配置重载成功")
-            return format_response(True, {"message": msg, "config": data}), 200
+            return Result.success({"message": msg, "config": data})
     except Exception as e:
         logging.error(f"重载配置异常: {str(e)}")
-        return format_error_response(f"重载配置失败: {str(e)}", 500)
+        return Result.error(f"重载配置失败: {str(e)}", 500)
 
 @config_bp.route('/cleanup', methods=['POST'])
 @require_role('admin')
@@ -140,10 +126,10 @@ def cleanup_config():
         status, msg, data = config_service.cleanup_invalid_config()
         if not status:
             logging.error(f"清理无效配置失败: {msg}")
-            return format_error_response(msg, 500)
+            return Result.error(msg, 500)
         else:
             logging.info(f"清理无效配置完成，共删除{data}个无效配置")
-            return format_response(True, {"message": msg, "count": data}), 200
+            return Result.success({"message": msg, "count": data})
     except Exception as e:
         logging.error(f"清理无效配置异常: {str(e)}")
-        return format_error_response(f"清理无效配置失败: {str(e)}", 500)
+        return Result.error(f"清理无效配置失败: {str(e)}", 500)

@@ -128,7 +128,7 @@
                                     <th>值</th>
                                     <th>默认值</th>
                                     <th>描述</th>
-                                    <th>关联功能ID</th>
+                                    <th>关联对象</th>
                                     <th v-if="currentUser && currentUser.role === 'admin'">操作</th>
                                 </tr>
                             </thead>
@@ -139,7 +139,7 @@
                                     <td>{{ config.value }}</td>
                                     <td>{{ config.default_value }}</td>
                                     <td>{{ config.description }}</td>
-                                    <td>{{ config.feature_id }}</td>
+                                    <td>{{ config.feature_id === 0 ? '系统配置' : config.feature_name || '未关联功能' }}</td>
                                     <td v-if="currentUser && currentUser.role === 'admin'">
                                         <button class="btn-edit" @click="openEditConfigModal(config)">编辑</button>
                                         <button class="btn-danger" @click="deleteConfig(config)">删除</button>
@@ -150,29 +150,25 @@
                     </div>
                     
                     <!-- 新增/编辑配置模态框 -->
-                    <div class="modal" v-if="showConfigModal">
+                    <div class="modal" v-if="configModal.show">
                         <div class="modal-content">
-                            <h3>{{ isEditing ? '编辑配置' : '新增配置' }}</h3>
+                            <h3>{{ configModal.mode === 'edit' ? '编辑配置' : '新增配置' }}</h3>
                             <form @submit.prevent="saveConfig">
                                 <div class="form-group">
                                     <label>名称:</label>
-                                    <input type="text" v-model="currentConfig.name" required>
+                                    <input type="text" v-model="configModal.formData.name" required>
                                 </div>
                                 <div class="form-group">
                                     <label>值:</label>
-                                    <input type="text" v-model="currentConfig.value">
+                                    <input type="text" v-model="configModal.formData.value">
                                 </div>
                                 <div class="form-group">
                                     <label>默认值:</label>
-                                    <input type="text" v-model="currentConfig.default_value">
+                                    <input type="text" v-model="configModal.formData.default_value">
                                 </div>
                                 <div class="form-group">
                                     <label>描述:</label>
-                                    <textarea v-model="currentConfig.description"></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label>关联功能ID:</label>
-                                    <input type="number" v-model="currentConfig.feature_id" min="0">
+                                    <textarea v-model="configModal.formData.description"></textarea>
                                 </div>
                                 <div class="form-actions">
                                     <button type="submit" class="btn-primary">保存</button>
@@ -182,8 +178,6 @@
                         </div>
                     </div>
                     
-                    <!-- 模态框遮罩 -->
-                    <div class="modal-overlay" v-if="showConfigModal" @click="closeConfigModal"></div>
                 </div>
             </div>
         </div>

@@ -82,6 +82,7 @@ class Config(Base_model):
     default_value = db.Column(db.String(256), unique=False, nullable=True)
     description = db.Column(db.String(256), unique=False, nullable=True)
     feature_id = db.Column(db.Integer, unique=False, nullable=False, default=0)
+    feature_name = ""
 
 # 最后引入模型事件
 from . import models_events

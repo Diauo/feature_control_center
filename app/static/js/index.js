@@ -33,7 +33,8 @@ createApp({
                 id: null,
                 key: '',
                 value: '',
-                description: ''
+                description: '',
+                feature_id: 0
             }
         });
 
@@ -62,15 +63,27 @@ createApp({
             
             // 获取所有功能
             let response = await api.feature.get_all_feature();
-            features.value = response.data.data;
+            if (response.data.status) {
+                features.value = response.data.data;
+            } else {
+                addNotification(response.data.message || '加载功能列表失败');
+            }
             // 获取所有客户
             response = await api.customer.get_all_customer();
-            customers.value = response.data.data;
+            if (response.data.status) {
+                customers.value = response.data.data;
+            } else {
+                addNotification(response.data.message || '加载客户列表失败');
+            }
             // 获取所有分类
             response = await api.category.get_all_category();
-            categories.value = response.data.data;
-            // 构建分类引用映射
-            buildCategoryReferenceMap(categories.value);
+            if (response.data.status) {
+                categories.value = response.data.data;
+                // 构建分类引用映射
+                buildCategoryReferenceMap(categories.value);
+            } else {
+                addNotification(response.data.message || '加载分类列表失败');
+            }
             
             // 加载配置
             await loadConfigs();
@@ -167,8 +180,9 @@ createApp({
                     categoriesReferenceMap.set(response.data.data.id, categories[index])
                 }
                 closeModal()
+                addNotification(response.data.message || "分类添加成功")
             } else {
-                alert("插入分类失败：" + response.data.data)
+                addNotification(response.data.message || "插入分类失败：" + response.data.data)
             }
         }
 
@@ -195,8 +209,9 @@ createApp({
                     categoriesReferenceMap.delete(params.id)
                 }
                 closeModal()
+                addNotification(response.data.message || "分类删除成功")
             } else {
-                alert("删除分类失败：" + response.data.data)
+                addNotification(response.data.message || "删除分类失败：" + response.data.data)
             }
         }
         // 打开新增分类窗口
@@ -360,13 +375,13 @@ createApp({
                         addConsoleLog(`功能 ${activeFeature.value.name} 执行中`, 'info')
                     } else {
                         addConsoleLog(`功能 ${activeFeature.value.name} 执行失败: ${data.data}`, 'error')
-                        addNotification(`功能 ${activeFeature.value.name} 执行失败`)
+                        addNotification(data.message || `功能 ${activeFeature.value.name} 执行失败`)
                         featureRunning.value = false
                         socket.disconnect()
                     }
                 }).catch(error => {
                     addConsoleLog(`功能 ${activeFeature.value.name} 执行异常: ${error.message}`, 'error')
-                    addNotification(`功能 ${activeFeature.value.name} 执行异常`)
+                    addNotification(error.message || `功能 ${activeFeature.value.name} 执行异常`)
                     featureRunning.value = false
                     socket.disconnect()
                 })
@@ -386,10 +401,10 @@ createApp({
                 featureRunning.value = false
                 if (data.status === 'success') {
                     addConsoleLog(`完成： ${data.msg}`, 'info')
-                    addNotification(`${activeFeature.value.name} 执行成功`)
+                    addNotification(data.message || `${activeFeature.value.name} 执行成功`)
                 } else {
                     addConsoleLog(`失败：${data.msg}`, 'error')
-                    addNotification(`${activeFeature.value.name} 执行失败`)
+                    addNotification(data.message || `${activeFeature.value.name} 执行失败`)
                 }
                 socket.disconnect()
             })
@@ -401,7 +416,7 @@ createApp({
         const stopFeature = () => {
             featureRunning.value = false
             addConsoleLog('功能运行已终止', 'warning')
-            addNotification(`${activeFeature.value.name}已停止运行`)
+            addNotification(`${activeFeature.value.name}已停止运行`)  // 这个是本地消息，不需要从响应中获取
         }
 
         // 添加控制台日志
@@ -493,7 +508,7 @@ createApp({
                     configs.value = response.data.data;
                 } else {
                     console.error('加载配置失败:', response.data.data);
-                    addNotification('加载配置失败: ' + response.data.data);
+                    addNotification(response.data.message || '加载配置失败: ' + response.data.data);
                 }
             } catch (error) {
                 console.error('加载配置时发生错误:', error);
@@ -515,7 +530,8 @@ createApp({
                 id: null,
                 key: '',
                 value: '',
-                description: ''
+                description: '',
+                feature_id: 0
             };
             configModal.value.show = true;
         };
@@ -534,7 +550,8 @@ createApp({
                 id: config.id,
                 key: config.key,
                 value: config.value,
-                description: config.description
+                description: config.description,
+                feature_id: config.feature_id || 0
             };
             configModal.value.show = true;
         };
@@ -546,7 +563,8 @@ createApp({
                 id: null,
                 key: '',
                 value: '',
-                description: ''
+                description: '',
+                feature_id: 0
             };
         };
 
@@ -563,12 +581,12 @@ createApp({
                 }
 
                 if (response.data.status) {
-                    addNotification(configModal.value.mode === 'add' ? '配置添加成功' : '配置更新成功');
+                    addNotification(response.data.message || (configModal.value.mode === 'add' ? '配置添加成功' : '配置更新成功'));
                     closeConfigModal();
                     await loadConfigs(); // 重新加载配置
                 } else {
                     console.error('保存配置失败:', response.data.data);
-                    addNotification('保存配置失败: ' + response.data.data);
+                    addNotification(response.data.message || '保存配置失败: ' + response.data.data);
                 }
             } catch (error) {
                 console.error('保存配置时发生错误:', error);
@@ -591,11 +609,11 @@ createApp({
             try {
                 const response = await api.config.delete_config(id);
                 if (response.data.status) {
-                    addNotification('配置删除成功');
+                    addNotification(response.data.message || '配置删除成功');
                     await loadConfigs(); // 重新加载配置
                 } else {
                     console.error('删除配置失败:', response.data.data);
-                    addNotification('删除配置失败: ' + response.data.data);
+                    addNotification(response.data.message || '删除配置失败: ' + response.data.data);
                 }
             } catch (error) {
                 console.error('删除配置时发生错误:', error);
@@ -615,10 +633,10 @@ createApp({
                 const response = await api.config.reload();
                 if (response.data.status) {
                     await loadConfigs(); // 重新加载配置
-                    addNotification('配置已重新加载');
+                    addNotification(response.data.message || '配置已重新加载');
                 } else {
                     console.error('重载配置失败:', response.data.data);
-                    addNotification('重载配置失败: ' + response.data.data);
+                    addNotification(response.data.message || '重载配置失败: ' + response.data.data);
                 }
             } catch (error) {
                 console.error('重载配置时发生错误:', error);
@@ -641,11 +659,11 @@ createApp({
             try {
                 const response = await api.config.cleanup();
                 if (response.data.status) {
-                    addNotification('无效配置清理成功');
+                    addNotification(response.data.message || '无效配置清理成功');
                     await loadConfigs(); // 重新加载配置
                 } else {
                     console.error('清理无效配置失败:', response.data.data);
-                    addNotification('清理无效配置失败: ' + response.data.data);
+                    addNotification(response.data.message || '清理无效配置失败: ' + response.data.data);
                 }
             } catch (error) {
                 console.error('清理无效配置时发生错误:', error);

@@ -7,7 +7,9 @@ import logging
 def get_all_config():
     try:
         sql = text('''
-            select * from base_config
+            SELECT c.*, f.name as feature_name
+            FROM base_config c
+            LEFT JOIN base_feature f ON c.feature_id = f.id
         ''')
         result = db.session.execute(sql).fetchall()
         return True, "成功", model_to_dict(result, Config)
@@ -20,7 +22,10 @@ def get_config_by_id(config_id):
         return False, "config_id为空", []
     try:
         sql = text('''
-            select * from base_config where id = :config_id
+            SELECT c.*, f.name as feature_name
+            FROM base_config c
+            LEFT JOIN base_feature f ON c.feature_id = f.id
+            WHERE c.id = :config_id
         ''')
         result = db.session.execute(sql, {'config_id': config_id}).fetchall()
         return True, "成功", model_to_dict(result, Config)
@@ -33,7 +38,10 @@ def get_config_by_feature_id(feature_id):
         return False, "feature_id为空", []
     try:
         sql = text('''
-            select * from base_config where feature_id = :feature_id
+            SELECT c.*, f.name as feature_name
+            FROM base_config c
+            LEFT JOIN base_feature f ON c.feature_id = f.id
+            WHERE c.feature_id = :feature_id
         ''')
         result = db.session.execute(sql, {'feature_id': feature_id}).fetchall()
         return True, "成功", model_to_dict(result, Config)
@@ -104,16 +112,12 @@ def delete_config_by_feature_id(feature_id):
         return False, f"删除相关配置失败: {str(e)}", None
 
 def reload_config():
+    '''
+    目前并没有重载配置的需求，但是预留一个接口
+    '''
     try:
-        # 这里可以根据实际需求实现配置重载逻辑
-        # 比如重新加载到内存、刷新缓存等
-        # 这里只做简单示例
-        configs = Config.query.all()
-        config_dict = {c.name: c.value for c in configs}
-        # 假设有全局变量或缓存需要更新
-        # global_config.update(config_dict)
         logging.info("配置重载成功")
-        return True, "配置重载成功", config_dict
+        return True, "配置重载成功", {}
     except Exception as e:
         logging.error(f"配置重载失败: {str(e)}")
         return False, f"配置重载失败: {str(e)}", {}

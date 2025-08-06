@@ -174,15 +174,6 @@ def get_users(page=1, per_page=10, username=None, role=None):
     return users_data, total
 
 
-def get_user_by_id(user_id):
-    """
-    根据ID获取用户详情
-    :param user_id: 用户ID
-    :return: User对象或None
-    """
-    return User.query.get(user_id)
-
-
 def update_user(user_id, **kwargs):
     """
     更新用户信息

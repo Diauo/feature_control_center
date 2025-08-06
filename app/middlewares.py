@@ -172,17 +172,19 @@ def global_result_format(app):
             # 获取响应的原始数据
             response_data = response.get_json()
             
-            # 检查是否已经格式化过了
+            # 检查是否已经格式化过了（与Result对象格式一致）
             if response_data and isinstance(response_data, dict) and \
                "status" in response_data and "code" in response_data and "data" in response_data:
                 # 已经格式化过了，直接返回
                 return response
             
-            status = response.status_code == 200
+            # 对于未格式化的响应，创建标准格式
+            status = response.status_code < 400  # 4xx和5xx表示错误
             wrapped_response = {
                 "status": status,
                 "code" : response.status_code,
-                "data": response_data if response_data else response.get_data().decode()
+                "data": response_data if response_data else response.get_data().decode(),
+                "message": "请求成功" if status else "请求失败"
             }
             # 请求成功，只是业务出错。覆写状态码，避免前端直接抛出异常
             response.status_code = 200

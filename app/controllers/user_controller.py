@@ -3,17 +3,9 @@ import app.services.user_service as user_service
 from app import db
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from app.middlewares import require_role
+from app.util.result import Result
 
 user_bp = Blueprint('user_bp', __name__, url_prefix='/api/users')
-
-
-def format_response(success, data, code=200):
-    """格式化响应数据"""
-    return jsonify({
-        "status": success,
-        "code": code,
-        "data": data
-    }), code if code != 200 else 200
 
 
 @user_bp.route('/register', methods=['POST'])
@@ -23,7 +15,7 @@ def register():
     
     # 验证必填字段
     if not data or not data.get('username') or not data.get('password'):
-        return format_response(False, "用户名和密码不能为空", 400)
+        return Result.bad_request("用户名和密码不能为空")
     
     # 调用服务层注册用户
     success, message, user_data = user_service.register_user(
@@ -35,9 +27,9 @@ def register():
     )
     
     if success:
-        return format_response(True, user_data, 200)
+        return Result.success(user_data)
     else:
-        return format_response(False, message, 400 if "用户名已存在" in message else 500)
+        return Result.business_error(message, 400 if "用户名已存在" in message else 500)
 
 
 @user_bp.route('/login', methods=['POST'])
@@ -47,23 +39,23 @@ def login():
     
     # 验证必填字段
     if not data or not data.get('username') or not data.get('password'):
-        return format_response(False, "用户名和密码不能为空", 400)
+        return Result.bad_request("用户名和密码不能为空")
     
     # 验证用户凭据
     success, message, user = user_service.authenticate_user(data['username'], data['password'])
     if not success:
-        return format_response(False, message, 401)
+        return Result.unauthorized(message)
     
     # 生成访问令牌和刷新令牌
     access_token, refresh_token = user_service.generate_tokens(user)
     
     # 返回用户信息和令牌
     user_data = user.to_dict()
-    return format_response(True, {
+    return Result.success({
         'access_token': access_token,
         'refresh_token': refresh_token,
         'user': user_data
-    }, 200)
+    })
 
 
 @user_bp.route('/refresh', methods=['POST'])
@@ -75,7 +67,7 @@ def refresh():
     user = user_service.get_user_by_id(int(current_user_id))
     
     if not user:
-        return format_response(False, "用户不存在", 404)
+        return Result.not_found("用户不存在")
     
     # 获取当前令牌的声明
     claims = get_jwt()
@@ -87,9 +79,9 @@ def refresh():
         additional_claims={'role': claims.get('role')}
     )
     
-    return format_response(True, {
+    return Result.success({
         'access_token': access_token
-    }, 200)
+    })
 
 
 @user_bp.route('/logout', methods=['POST'])
@@ -97,7 +89,7 @@ def logout():
     """用户登出"""
     # 在实际应用中，可能需要将令牌加入黑名单
     # 这里我们简化处理，直接返回成功
-    return format_response(True, "登出成功", 200)
+    return Result.success("登出成功")
 
 
 @user_bp.route('/me', methods=['GET'])
@@ -107,10 +99,10 @@ def get_current_user():
     user = user_service.get_user_by_id(int(current_user_id))
     
     if not user:
-        return format_response(False, "用户不存在", 404)
+        return Result.not_found("用户不存在")
     
     user_data = user.to_dict()
-    return format_response(True, user_data, 200)
+    return Result.success(user_data)
 
 
 @user_bp.route('/list', methods=['GET'])
@@ -126,12 +118,12 @@ def list_users():
     # 调用服务层获取用户列表
     users_data, total = user_service.get_users(page=page, per_page=per_page, username=username, role=role)
     
-    return format_response(True, {
-        'users': users_data,
-        'total': total,
-        'page': page,
-        'per_page': per_page
-    }, 200)
+    return Result.paginated(
+        data=users_data,
+        total=total,
+        page=page,
+        per_page=per_page
+    )
 
 
 @user_bp.route('/<int:user_id>', methods=['GET'])
@@ -140,10 +132,10 @@ def get_user(user_id):
     """获取用户详情"""
     user = user_service.get_user_by_id(user_id)
     if not user:
-        return format_response(False, "用户不存在", 404)
+        return Result.not_found("用户不存在")
     
     user_data = user.to_dict()
-    return format_response(True, user_data, 200)
+    return Result.success(user_data)
 
 
 @user_bp.route('/', methods=['POST'])
@@ -154,7 +146,7 @@ def create_user():
     
     # 验证必填字段
     if not data or not data.get('username') or not data.get('password'):
-        return format_response(False, "用户名和密码不能为空", 400)
+        return Result.bad_request("用户名和密码不能为空")
     
     # 调用服务层创建用户
     success, message, user_data = user_service.register_user(
@@ -166,9 +158,9 @@ def create_user():
     )
     
     if success:
-        return format_response(True, user_data, 201)
+        return Result.success(user_data, code=201)
     else:
-        return format_response(False, message, 400 if "用户名已存在" in message else 500)
+        return Result.business_error(message, 400 if "用户名已存在" in message else 500)
 
 
 @user_bp.route('/<int:user_id>', methods=['PUT'])
@@ -181,9 +173,9 @@ def update_user_endpoint(user_id):
     success, message, user_data = user_service.update_user(user_id, **data)
     
     if success:
-        return format_response(True, user_data, 200)
+        return Result.success(user_data)
     else:
-        return format_response(False, message, 400 if "用户名已存在" in message else 404)
+        return Result.business_error(message, 400 if "用户名已存在" in message else 404)
 
 
 @user_bp.route('/<int:user_id>', methods=['DELETE'])
@@ -194,6 +186,6 @@ def delete_user(user_id):
     success, message = user_service.delete_user(user_id)
     
     if success:
-        return format_response(True, message, 200)
+        return Result.success(message)
     else:
-        return format_response(False, message, 400 if "不能删除最后一个管理员用户" in message else 404)
+        return Result.business_error(message, 400 if "不能删除最后一个管理员用户" in message else 404)
