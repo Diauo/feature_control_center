@@ -63,6 +63,13 @@ def create_app(config_class='app.config.Config'):
         except Exception as e:
             print(f"创建默认管理员账户时出错: {str(e)}")
         
+        # 检查并创建默认客户
+        try:
+            from app.services.customer_service import create_default_customer
+            create_default_customer()
+        except Exception as e:
+            print(f"创建默认客户时出错: {str(e)}")
+        
     return app
 
 def run_with_socketio(app):

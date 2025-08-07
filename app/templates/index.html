@@ -23,13 +23,13 @@
                     </select>
                 </div>
                 <div class="nav-links">
-                    <a href="#" @click="currentPage = 'home'"
+                    <a href="#" @click="switchToHome"
                         :class="['nav-link', currentPage === 'home' ? 'active' : '']">功能列表</a>
                     <a href="#" @click="currentPage = 'cron'"
                         :class="['nav-link', currentPage === 'cron' ? 'active' : '']">定时任务</a>
                     <a href="#" @click="currentPage = 'logs'"
                         :class="['nav-link', currentPage === 'logs' ? 'active' : '']">日志查询</a>
-                    <a href="#" @click="currentPage = 'config'"
+                    <a href="#" @click="switchToConfig"
                         :class="['nav-link', currentPage === 'config' ? 'active' : '']">系统配置</a>
                 </div>
                 <div class="user-info" v-if="currentUser">

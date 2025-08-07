@@ -783,6 +783,37 @@ createApp({
         provide('toggleCategory', toggleCategory);
         provide('toggleCategoryEdite', toggleCategoryEdite);
         provide('categorieEditMode', categorieEditMode);
+        
+        // 添加切换到首页的方法
+        const switchToHome = async () => {
+            currentPage.value = 'home';
+            // 重新加载功能列表数据
+            let response = await api.feature.get_all_feature();
+            if (response.data.status) {
+                features.value = response.data.data;
+            } else {
+                addNotification(response.data.message || '加载功能列表失败');
+            }
+            
+            // 重新加载分类数据
+            response = await api.category.get_all_category();
+            if (response.data.status) {
+                categories.value = response.data.data;
+                // 重新构建分类引用映射
+                categoriesReferenceMap.clear();
+                buildCategoryReferenceMap(categories.value);
+            } else {
+                addNotification(response.data.message || '加载分类列表失败');
+            }
+        };
+        
+        // 添加切换到配置页面的方法
+        const switchToConfig = async () => {
+            currentPage.value = 'config';
+            // 重新加载配置数据
+            await loadConfigs();
+        };
+        
         return {
             // 原有的返回值
             currentPage,
@@ -833,7 +864,11 @@ createApp({
             openRegisterFeatureModal,
             closeRegisterFeatureModal,
             handleFileUpload,
-            registerFeature
+            registerFeature,
+            // 添加切换到首页的方法
+            switchToHome,
+            // 添加切换到配置页面的方法
+            switchToConfig
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');
