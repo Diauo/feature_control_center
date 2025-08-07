@@ -154,7 +154,7 @@
                     
                     <!-- 新增/编辑配置模态框 -->
                     <div class="modal-overlay" v-bind:class="{ active: configModal.show }" @click="closeConfigModal"></div>
-                    <div class="modal" v-bind:class="{ active: configModal.show }">
+                    <div class="modal modal-center" v-bind:class="{ active: configModal.show }">
                         <div class="modal-content">
                             <h3>{{ configModal.mode === 'edit' ? '编辑配置' : '新增配置' }}</h3>
                             <form @submit.prevent="saveConfig">
@@ -250,7 +250,7 @@
 
         <!-- 功能注册模态框 -->
         <div class="modal-overlay" v-bind:class="{ active: registerFeatureModal.show }" @click="closeRegisterFeatureModal"></div>
-        <div class="modal" v-bind:class="{ active: registerFeatureModal.show }">
+        <div class="modal modal-center" v-bind:class="{ active: registerFeatureModal.show }">
             <div class="modal-content">
                 <h3>注册新功能</h3>
                 <form @submit.prevent="registerFeature">

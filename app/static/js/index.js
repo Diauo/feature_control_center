@@ -31,7 +31,7 @@ createApp({
             mode: 'add', // 'add' 或 'edit'
             formData: {
                 id: null,
-                key: '',
+                name: '',
                 value: '',
                 description: '',
                 feature_id: 0
@@ -535,7 +535,7 @@ createApp({
             configModal.value.title = '添加配置';
             configModal.value.formData = {
                 id: null,
-                key: '',
+                name: '',
                 value: '',
                 description: '',
                 feature_id: 0
@@ -545,6 +545,7 @@ createApp({
 
         // 打开编辑配置模态框
         const openEditConfigModal = (config) => {
+            debugger;
             // 检查用户是否有管理员权限
             if (!currentUser.value || currentUser.value.role !== 'admin') {
                 addNotification('权限不足：只有管理员可以编辑配置');
@@ -555,8 +556,9 @@ createApp({
             configModal.value.title = '编辑配置';
             configModal.value.formData = {
                 id: config.id,
-                key: config.key,
+                name: config.name,
                 value: config.value,
+                default_value: config.default_value,
                 description: config.description,
                 feature_id: config.feature_id || 0
             };
@@ -568,7 +570,7 @@ createApp({
             configModal.value.show = false;
             configModal.value.formData = {
                 id: null,
-                key: '',
+                name: '',
                 value: '',
                 description: '',
                 feature_id: 0
@@ -578,6 +580,7 @@ createApp({
         // 保存配置
         const saveConfig = async () => {
             try {
+                debugger;
                 let response;
                 if (configModal.value.mode === 'add') {
                     // 添加配置
@@ -602,7 +605,7 @@ createApp({
         };
 
         // 删除配置
-        const deleteConfig = async (id) => {
+        const deleteConfig = async (config) => {
             // 检查用户是否有管理员权限
             if (!currentUser.value || currentUser.value.role !== 'admin') {
                 addNotification('权限不足：只有管理员可以删除配置');
@@ -614,7 +617,8 @@ createApp({
             }
 
             try {
-                const response = await api.config.delete_config(id);
+                debugger
+                const response = await api.config.delete_config(config.id);
                 if (response.data.status) {
                     addNotification(response.data.message || '配置删除成功');
                     await loadConfigs(); // 重新加载配置
