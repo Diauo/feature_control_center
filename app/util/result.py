@@ -78,7 +78,7 @@ class Result:
         :param message: 错误消息
         :return: 未授权结果对象
         """
-        return Result.error(message=message, code=401).to_json()
+        return Result.error(message=message, code=401)
 
     @staticmethod
     def forbidden(message: str = "权限不足") -> 'Result':
@@ -88,7 +88,7 @@ class Result:
         :param message: 错误消息
         :return: 权限不足结果对象
         """
-        return Result.error(message=message, code=403).to_json()
+        return Result.error(message=message, code=403)
 
     @staticmethod
     def not_found(message: str = "资源不存在") -> 'Result':
@@ -98,7 +98,7 @@ class Result:
         :param message: 错误消息
         :return: 资源不存在结果对象
         """
-        return Result.error(message=message, code=404).to_json()
+        return Result.error(message=message, code=404)
 
     @staticmethod
     def bad_request(message: str = "请求参数错误") -> 'Result':
@@ -108,7 +108,7 @@ class Result:
         :param message: 错误消息
         :return: 请求参数错误结果对象
         """
-        return Result.error(message=message, code=400).to_json()
+        return Result.error(message=message, code=400)
 
     @staticmethod
     def business_error(message: str = "业务处理失败", code: int = 400, data: Any = None) -> 'Result':
