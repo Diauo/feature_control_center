@@ -59,19 +59,17 @@ def register_feature():
     if not file:
         return Result.bad_request("缺少文件参数")
     
-    # 获取元数据
-    meta_data_str = request.form.get('metaData')
-    if not meta_data_str:
-        return Result.bad_request("缺少元数据参数")
+    # 获取用户提供的功能信息
+    name = request.form.get('name')
+    description = request.form.get('description')
+    customer_id = request.form.get('customer_id')
+    category_id = request.form.get('category_id', 0)
     
-    try:
-        import json
-        meta_data = json.loads(meta_data_str)
-    except Exception as e:
-        return Result.bad_request("元数据格式不正确")
+    if not name:
+        return Result.bad_request("缺少功能名称参数")
     
     # 调用服务注册功能
-    status, msg = feature_service.register_feature(file, meta_data)
+    status, msg = feature_service.register_feature(file, name, description, customer_id, category_id)
     if not status:
         return Result.error(msg, 500)
     else:

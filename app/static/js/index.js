@@ -41,7 +41,10 @@ createApp({
         // 功能注册相关数据
         const registerFeatureModal = ref({
             show: false,
-            metaData: null,
+            name: '',
+            description: '',
+            customer_id: '',
+            category_id: 0,
             file: null
         });
 
@@ -697,12 +700,15 @@ createApp({
         // 关闭注册功能模态框
         const closeRegisterFeatureModal = () => {
             registerFeatureModal.value.show = false;
-            registerFeatureModal.value.metaData = null;
+            registerFeatureModal.value.name = '';
+            registerFeatureModal.value.description = '';
+            registerFeatureModal.value.customer_id = '';
+            registerFeatureModal.value.category_id = 0;
             registerFeatureModal.value.file = null;
         };
         
         // 处理文件上传
-        const handleFileUpload = async (event) => {
+        const handleFileUpload = (event) => {
             const file = event.target.files[0];
             if (!file) return;
             
@@ -713,77 +719,18 @@ createApp({
             }
             
             registerFeatureModal.value.file = file;
-            
-            // 读取文件内容并解析元数据
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const content = e.target.result;
-                try {
-                    // 解析元数据
-                    const metaData = parsePythonMetaData(content);
-                    registerFeatureModal.value.metaData = metaData;
-                } catch (error) {
-                    console.error('解析元数据失败:', error);
-                    addNotification('解析元数据失败: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
         };
         
-        // 解析Python文件中的元数据
-        const parsePythonMetaData = (content) => {
-            // 使用正则表达式提取__meta__字典
-            // 匹配__meta__ = { ... }结构，支持多行和嵌套
-            const metaRegex = /__meta__\s*=\s*(\{(?:[^{}]|\{[^{}]*\})*\})/s;
-            const match = content.match(metaRegex);
-            
-            if (!match) {
-                throw new Error('未找到__meta__元数据');
-            }
-            
-            // 简单解析元数据（实际项目中可能需要更复杂的解析）
-            let metaStr = match[1];
-            // 这里我们使用一个简化的解析方法
-            // 在实际项目中，你可能需要使用更安全的解析方法
-            try {
-                // 替换一些Python特有的语法为JavaScript可解析的格式
-                // 处理注释，移除#后面的注释内容
-                metaStr = metaStr.replace(/#.*$/gm, '');
-                
-                // 为键添加双引号
-                metaStr = metaStr.replace(/(\w+)(?=\s*:)/g, '"$1"');
-                
-                // 将单引号替换为双引号
-                metaStr = metaStr.replace(/'/g, '"');
-                
-                // 将元组转换为数组
-                metaStr = metaStr.replace(/\(\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\)/g, '["$1", "$2"]');
-                
-                // 处理可能的尾随逗号
-                metaStr = metaStr.replace(/,\s*}/g, '}');
-                metaStr = metaStr.replace(/,\s*]/g, ']');
-                
-                // 移除空白行
-                metaStr = metaStr.replace(/^\s*[\r\n]/gm, '');
-                
-                const metaData = JSON.parse(metaStr);
-                
-                // 添加客户和分类字段
-                metaData.customer_id = 0;  // 默认值
-                metaData.category_id = 0;  // 默认值
-                
-                return metaData;
-            } catch (error) {
-                console.error('解析元数据失败:', error);
-                console.error('元数据字符串:', metaStr);
-                throw new Error('元数据格式不正确: ' + error.message);
-            }
-        };
         
         // 注册功能
         const registerFeature = async () => {
-            if (!registerFeatureModal.value.file || !registerFeatureModal.value.metaData) {
+            if (!registerFeatureModal.value.file) {
                 addNotification('请先选择功能脚本文件');
+                return;
+            }
+            
+            if (!registerFeatureModal.value.name) {
+                addNotification('请输入功能名称');
                 return;
             }
             
@@ -791,7 +738,10 @@ createApp({
                 // 创建FormData对象
                 const formData = new FormData();
                 formData.append('file', registerFeatureModal.value.file);
-                formData.append('metaData', JSON.stringify(registerFeatureModal.value.metaData));
+                formData.append('name', registerFeatureModal.value.name);
+                formData.append('description', registerFeatureModal.value.description);
+                formData.append('customer_id', registerFeatureModal.value.customer_id);
+                formData.append('category_id', registerFeatureModal.value.category_id);
                 
                 // 调用API注册功能
                 const response = await api.feature.register_feature(formData);
