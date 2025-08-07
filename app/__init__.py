@@ -56,6 +56,13 @@ def create_app(config_class='app.config.Config'):
     with app.app_context():
         db.create_all()
         
+        # 检查并创建默认管理员账户
+        try:
+            from app.services.admin_init_service import create_default_admin
+            create_default_admin()
+        except Exception as e:
+            print(f"创建默认管理员账户时出错: {str(e)}")
+        
     return app
 
 def run_with_socketio(app):

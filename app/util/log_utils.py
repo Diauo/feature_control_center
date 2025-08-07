@@ -39,4 +39,4 @@ def configure_logger(name: str, level: int = logging.INFO) -> logging.Logger:
 
 
 # 全局日志实例
-logger = configure_logger("mc-update-server")
+logger = configure_logger("feature_control_center")
