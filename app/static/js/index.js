@@ -733,7 +733,8 @@ createApp({
         // 解析Python文件中的元数据
         const parsePythonMetaData = (content) => {
             // 使用正则表达式提取__meta__字典
-            const metaRegex = /__meta__\s*=\s*({[\s\S]*?})\s*\n\s*\n/;
+            // 匹配__meta__ = { ... }结构，支持多行和嵌套
+            const metaRegex = /__meta__\s*=\s*(\{(?:[^{}]|\{[^{}]*\})*\})/s;
             const match = content.match(metaRegex);
             
             if (!match) {
@@ -741,19 +742,31 @@ createApp({
             }
             
             // 简单解析元数据（实际项目中可能需要更复杂的解析）
-            const metaStr = match[1];
+            let metaStr = match[1];
             // 这里我们使用一个简化的解析方法
             // 在实际项目中，你可能需要使用更安全的解析方法
             try {
                 // 替换一些Python特有的语法为JavaScript可解析的格式
-                const normalizedMetaStr = metaStr
-                    .replace(/'/g, '"')  // 单引号替换为双引号
-                    .replace(/(\w+):/g, '"$1":')  // 为键添加双引号
-                    .replace(/\(\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\)/g, '["$1", "$2"]')  // 将元组转换为数组
-                    .replace(/,\s*}/g, '}')  // 移除末尾的逗号
-                    .replace(/,\s*]/g, ']');  // 移除末尾的逗号
+                // 处理注释，移除#后面的注释内容
+                metaStr = metaStr.replace(/#.*$/gm, '');
                 
-                const metaData = JSON.parse(normalizedMetaStr);
+                // 为键添加双引号
+                metaStr = metaStr.replace(/(\w+)(?=\s*:)/g, '"$1"');
+                
+                // 将单引号替换为双引号
+                metaStr = metaStr.replace(/'/g, '"');
+                
+                // 将元组转换为数组
+                metaStr = metaStr.replace(/\(\s*"([^"]*)"\s*,\s*"([^"]*)"\s*\)/g, '["$1", "$2"]');
+                
+                // 处理可能的尾随逗号
+                metaStr = metaStr.replace(/,\s*}/g, '}');
+                metaStr = metaStr.replace(/,\s*]/g, ']');
+                
+                // 移除空白行
+                metaStr = metaStr.replace(/^\s*[\r\n]/gm, '');
+                
+                const metaData = JSON.parse(metaStr);
                 
                 // 添加客户和分类字段
                 metaData.customer_id = 0;  // 默认值
@@ -762,6 +775,7 @@ createApp({
                 return metaData;
             } catch (error) {
                 console.error('解析元数据失败:', error);
+                console.error('元数据字符串:', metaStr);
                 throw new Error('元数据格式不正确: ' + error.message);
             }
         };

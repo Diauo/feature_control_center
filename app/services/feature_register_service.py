@@ -76,23 +76,3 @@ def scan_and_register_features():
         feature_service.delete_feature(feature_id)
         # 删除相关配置
         config_service.delete_config_by_feature_id(feature_id)
-
-
-def start_feature_register_watcher(app):
-    def run():
-        try:
-            while True:
-                with app.app_context():
-                    scan_and_register_features()
-                time.sleep(SCAN_INTERVAL)
-        except Exception as e:
-            logger.error(f"功能注册服务异常: {e}")
-
-    t = threading.Thread(target=run, daemon=True)
-    t.start()
-
-# 在 Flask 启动时调用
-def init_feature_register(app):
-    with app.app_context():
-        start_feature_register_watcher(app)
-
