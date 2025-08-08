@@ -34,17 +34,28 @@ def get_feature_by_customer_id(customer_id):
     result = db.session.execute(sql, {'customer_id': customer_id}).fetchall()
     return True, "成功", model_to_dict(result, Feature)
 
-def get_feature_by_category_id(category_id):
+def get_feature_by_category_id(category_id, customer_id=None):
     if category_id is None:
         return False, "分类ID[category_id]为空", []
-    sql = text('''
+    
+    # 构建基础SQL查询
+    sql_str = '''
                select ft.id, ft.name, ft.description, ft.customer_id,
                     ct.name customer_name from base_feature ft
                 left join base_customer ct on ft.customer_id = ct.id
                 where ft.category_id = :category_id
-                group by ft.id, ct.id
-               ''')
-    result = db.session.execute(sql, {'category_id': category_id}).fetchall()
+               '''
+    
+    # 如果提供了customer_id，则添加到查询条件中
+    params = {'category_id': category_id}
+    if not customer_id in [None, '']:
+        sql_str += ' and ft.customer_id = :customer_id'
+        params['customer_id'] = customer_id
+    
+    sql_str += ' group by ft.id, ct.id'
+    
+    sql = text(sql_str)
+    result = db.session.execute(sql, params).fetchall()
     return True, "成功", model_to_dict(result, Feature)
 def add_feature(feature):
     """

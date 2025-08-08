@@ -7,6 +7,13 @@ const feature_api = {
   get_feature_by_customer_id(id) {
     return api.client.get('/feat/get_feature_by_customer_id?customer_id=' + id);
   },
+  get_feature_by_category_id(id, customerId = null) {
+    let url = '/feat/get_feature_by_category_id?id=' + id;
+    if (customerId !== null) {
+      url += '&customer_id=' + customerId;
+    }
+    return api.client.get(url);
+  },
   execute_feature(id, clientId) {
     return api.client.post('/feat/execute', {"feature_id": id, "client_id": clientId });
   },

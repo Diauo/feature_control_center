@@ -1,4 +1,4 @@
-const { createApp, ref, computed, onMounted, provide, nextTick } = Vue
+const { createApp, ref, computed, onMounted, provide, nextTick, watch } = Vue
 import api from './api/api.js';
 import { getClientUUID } from './utils.js';
 import SidebarMenu from './defineComponent.js';
@@ -72,20 +72,22 @@ createApp({
             // 获取当前用户信息
             currentUser.value = authService.getCurrentUser();
             
-            // 获取所有功能
-            let response = await api.feature.get_all_feature();
-            if (response.data.status) {
-                features.value = response.data.data;
-            } else {
-                addNotification(response.data.message || '加载功能列表失败');
-            }
             // 获取所有客户
-            response = await api.customer.get_all_customer();
+            let response = await api.customer.get_all_customer();
             if (response.data.status) {
                 customers.value = response.data.data;
+                
+                // 如果有客户，选择第一个客户作为默认客户
+                if (customers.value.length > 0) {
+                    currentCustomer.value = customers.value[0].id;
+                }
             } else {
                 addNotification(response.data.message || '加载客户列表失败');
             }
+            
+            // 根据客户选择加载功能
+            await loadFeaturesByCustomer();
+            
             // 获取所有分类
             response = await api.category.get_all_category();
             if (response.data.status) {
@@ -98,6 +100,11 @@ createApp({
             
             // 加载配置
             await loadConfigs();
+        })
+
+        // 监听客户选择变化
+        watch(currentCustomer, async (newCustomer, oldCustomer) => {
+            await loadFeaturesByCustomer();
         })
 
         // 构建分类引用映射，用于通过映射直接修改节点
@@ -138,12 +145,6 @@ createApp({
             if (currentCustomer.value) {
                 result = result.filter(feature =>
                     feature.customer_id === currentCustomer.value
-                )
-            }
-            // 根据标签分类
-            if (selectedCategory.value) {
-                result = result.filter(feature =>
-                    feature.category.split(",").includes(selectedCategory.value)
                 )
             }
             return result
@@ -310,32 +311,55 @@ createApp({
         }
 
         // 切换分类展开/收起
-        const toggleCategory = (category) => {
-            // 如果有子菜单，递归地折叠所有子菜单
-            const collapseChildren = (cat) => {
-                if (cat.child && cat.child.length > 0) {
-                    cat.child.forEach(child => {
-                        child.expanded = false;  // 折叠子菜单
-                        collapseChildren(child); // 递归折叠
-                    });
+        const toggleCategory = async (category) => {
+            // 如果在编辑模式下，保持原有的行为
+            if (categorieEditMode.value) {
+                // 如果有子菜单，递归地折叠所有子菜单
+                const collapseChildren = (cat) => {
+                    if (cat.child && cat.child.length > 0) {
+                        cat.child.forEach(child => {
+                            child.expanded = false;  // 折叠子菜单
+                            collapseChildren(child); // 递归折叠
+                        });
+                    }
+                };
+
+                // 切换当前类别的折叠状态
+                category.expanded = !category.expanded;
+
+                // 如果折叠了当前菜单，折叠它的所有子菜单
+                if (!category.expanded) {
+                    collapseChildren(category);
                 }
-            };
 
-            // 切换当前类别的折叠状态
-            category.expanded = !category.expanded;
-
-            // 如果折叠了当前菜单，折叠它的所有子菜单
-            if (!category.expanded) {
-                collapseChildren(category);
+                // 同时标识选中了该分类，高亮该分类，并设置过滤标签
+                selectCategory()
+                return;
             }
-
-            // 同时标识选中了该分类，高亮该分类，并设置过滤标签
-            selectCategory()
+            
+            // 非编辑模式下，根据分类查询功能
+            selectedCategory.value = category.id;
+            
+            // 如果是"所有功能"分类（id为null或undefined），使用get_feature_by_customer_id获取该客户的所有功能
+            if (category.id === null || category.id === undefined) {
+                await loadFeaturesByCustomer();
+            } else {
+                // 其他分类根据分类ID加载功能，并携带customer_id参数
+                let response = await api.feature.get_feature_by_category_id(category.id, currentCustomer.value);
+                if (response.data.status) {
+                    features.value = response.data.data;
+                } else {
+                    addNotification(response.data.message || '加载功能列表失败');
+                }
+            }
         }
 
         // 选择分类
-        const selectCategory = (categoryCode) => {
-            selectedCategory.value = categoryCode
+        const selectCategory = async (categoryCode) => {
+            selectedCategory.value = categoryCode || null;
+            
+            // 重新加载功能列表
+            await loadFeaturesByCustomer();
         }
 
         // 打开功能窗口
@@ -566,6 +590,34 @@ createApp({
             } catch (error) {
                 console.error('加载配置时发生错误:', error);
                 addNotification('加载配置时发生错误: ' + error.message);
+            }
+        };
+
+        // 根据客户选择加载功能
+        const loadFeaturesByCustomer = async () => {
+            // 没有客户的情况下，根据用户角色处理
+            if (!currentCustomer.value) {
+                // 管理员显示全部功能，其他角色不显示功能
+                if (currentUser.value && currentUser.value.role === 'admin') {
+                    let response = await api.feature.get_all_feature();
+                    if (response.data.status) {
+                        features.value = response.data.data;
+                    } else {
+                        addNotification(response.data.message || '加载功能列表失败');
+                    }
+                } else {
+                    // 非管理员不显示功能
+                    features.value = [];
+                }
+                return;
+            }
+            
+            // 有客户的情况下，根据客户加载功能
+            let response = await api.feature.get_feature_by_customer_id(currentCustomer.value);
+            if (response.data.status) {
+                features.value = response.data.data;
+            } else {
+                addNotification(response.data.message || '加载功能列表失败');
             }
         };
 
@@ -914,7 +966,9 @@ createApp({
             switchToConfig,
             // 添加删除功能相关方法
             confirmDeleteFeature,
-            deleteFeature
+            deleteFeature,
+            // 添加根据客户加载功能的方法
+            loadFeaturesByCustomer
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

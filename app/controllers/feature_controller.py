@@ -13,7 +13,7 @@ def get_all_feature():
 
 @feature_bp.route('/get_feature_by_customer_id', methods=['GET'])
 def get_feature_by_customer_id():
-    customer_id = request.args.get('id')
+    customer_id = request.args.get('customer_id')
     if customer_id is None:
         return Result.bad_request("没有有效的参数")
     status, msg, data = feature_service.get_feature_by_customer_id(customer_id)
@@ -22,14 +22,13 @@ def get_feature_by_customer_id():
     else:
         return Result.success(data)
 
-@feature_bp.route('/get_feature_by_tags_id', methods=['GET'])
-def get_feature_by_category_tags_id():
-    tags = request.args.get('tags')
-    if tags:
-        tags = tags.split(',')
-    else:
-        return Result.bad_request("没有有效参数标签ID[tags]")
-    status, msg, data = feature_service.get_feature_by_tags_id(tags)
+@feature_bp.route('/get_feature_by_category_id', methods=['GET'])
+def get_feature_by_category_id():
+    category_id = request.args.get('id')
+    customer_id = request.args.get('customer_id')
+    if category_id is None:
+        return Result.bad_request("没有有效的参数")
+    status, msg, data = feature_service.get_feature_by_category_id(category_id, customer_id)
     if not status:
         return Result.error(msg, 500)
     else:
