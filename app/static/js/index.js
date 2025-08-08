@@ -1,5 +1,6 @@
 const { createApp, ref, computed, onMounted, provide, nextTick } = Vue
 import api from './api/api.js';
+import { getClientUUID } from './utils.js';
 import SidebarMenu from './defineComponent.js';
 import authService from './services/authService.js';
 
@@ -370,7 +371,7 @@ createApp({
             featureRunning.value = true
 
             // 生成唯一 client_id
-            let clientId = crypto.randomUUID();
+            let clientId = getClientUUID();
 
             // 连接到 WebSocket 服务
             let socket = io('/feature')
