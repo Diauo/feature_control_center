@@ -136,7 +136,10 @@ def execute_feature(feature_id, client_id):
                     ctx.error(f"{feature.get('name', '未知功能')} 功能脚本缺少 run() 方法，不符合规范")
                     return
                 config = config_service.get_config_by_feature_id(feature_id)
-                config_dict = {c['name']: c['default_value'] for c in config[2]} if config[0] else {}
+                config_dict = {
+                        c['name']: c['value'] if c.get('value') not in [None, ''] else c.get('default_value')
+                        for c in config[2]
+                    } if config[0] else {}
                 if not config_dict:
                     config_dict = {}
                 # 如果配置中存在为空的值，也没有默认值，则认为是无效配置，指出没有值的配置，报错并结束
