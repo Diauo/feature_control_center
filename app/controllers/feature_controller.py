@@ -74,3 +74,12 @@ def register_feature():
         return Result.error(msg, 500)
     else:
         return Result.success(None, "功能注册成功")
+
+@feature_bp.route('/delete/<int:feature_id>', methods=['DELETE'])
+def delete_feature(feature_id):
+    # 调用服务删除功能
+    status, msg = feature_service.delete_feature(feature_id)
+    if not status:
+        return Result.error(msg, 500)
+    else:
+        return Result.success(None, "功能删除成功")

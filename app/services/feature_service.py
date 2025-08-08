@@ -89,6 +89,25 @@ def delete_feature(feature_id):
     feature = Feature.query.get(feature_id)
     if not feature:
         return False, f"未找到ID为[{feature_id}]的功能"
+    
+    # 1. 删除相关配置
+    from app.services import config_service
+    config_service.delete_config_by_feature_id(feature_id)
+    
+    # 2. 删除功能文件
+    try:
+        if feature.feature_file_name:
+            # 获取项目根目录
+            base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+            # 拼接文件路径
+            file_path = os.path.join(base_dir, feature.feature_file_name)
+            # 如果文件存在则删除
+            if os.path.exists(file_path):
+                os.remove(file_path)
+    except Exception as e:
+        logger.error(f"删除功能文件失败: {e}，继续删除数据库记录")
+    
+    # 3. 删除数据库记录
     db.session.delete(feature)
     db.session.commit()
     return True, "删除成功"

@@ -16,6 +16,9 @@ const feature_api = {
         'Content-Type': 'multipart/form-data'
       }
     });
+  },
+  delete_feature(feature_id) {
+    return api.client.delete(`/feat/delete/${feature_id}`);
   }
 };
 

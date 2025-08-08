@@ -359,6 +359,48 @@ createApp({
             consoleLogs.value = []
         }
 
+        // 删除功能 - 第一次确认
+        const confirmDeleteFeature = () => {
+            // 检查用户是否有管理员权限
+            if (!currentUser.value || currentUser.value.role !== 'admin') {
+                addNotification('权限不足：只有管理员可以删除功能');
+                return;
+            }
+            
+            // 显示第一次确认提示
+            if (confirm(`确定要删除功能 "${activeFeature.value.name}" 吗？\n\n点击"确定"继续删除操作。`)) {
+                // 显示第二次确认提示，位置不同
+                setTimeout(() => {
+                    if (confirm(`请再次确认：确定要删除功能 "${activeFeature.value.name}" 吗？\n\n注意：此操作不可恢复！`)) {
+                        // 执行删除操作
+                        deleteFeature();
+                    }
+                }, 100);
+            }
+        }
+
+        // 删除功能 - 执行删除
+        const deleteFeature = async () => {
+            try {
+                const response = await api.feature.delete_feature(activeFeature.value.id);
+                if (response.data.status) {
+                    addNotification(response.data.message || '功能删除成功');
+                    // 关闭功能窗口
+                    closeFeatureWindow();
+                    // 重新加载功能列表
+                    const featureResponse = await api.feature.get_all_feature();
+                    if (featureResponse.data.status) {
+                        features.value = featureResponse.data.data;
+                    }
+                } else {
+                    addNotification(response.data.message || '功能删除失败: ' + response.data.data);
+                }
+            } catch (error) {
+                console.error('删除功能时发生错误:', error);
+                addNotification('删除功能时发生错误: ' + error.message);
+            }
+        }
+
         // 运行功能
         const runFeature = () => {
             // 如果正在运行，则退出
@@ -869,7 +911,10 @@ createApp({
             // 添加切换到首页的方法
             switchToHome,
             // 添加切换到配置页面的方法
-            switchToConfig
+            switchToConfig,
+            // 添加删除功能相关方法
+            confirmDeleteFeature,
+            deleteFeature
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

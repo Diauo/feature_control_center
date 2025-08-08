@@ -206,6 +206,7 @@
                 <button class="btn-cancel" @click="closeFeatureWindow">关闭</button>
                 <button class="btn-danger" v-if="featureRunning" @click="stopFeature">终止运行</button>
                 <button class="btn-confirm" v-else @click="runFeature">运行</button>
+                <button class="btn-danger" v-if="!featureRunning && currentUser && currentUser.role === 'admin'" @click="confirmDeleteFeature">删除</button>
             </div>
         </div>
 
