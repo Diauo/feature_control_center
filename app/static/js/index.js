@@ -79,12 +79,10 @@ createApp({
         
         const {
             logs: logList,
-            logDetails,
             logDetailList,
             loading: logsLoading,
             queryConditions,
             loadLogs,
-            loadLogDetails,
             loadLogDetailList,
             setQueryConditions,
             resetQueryConditions
@@ -285,14 +283,12 @@ createApp({
             
             // 日志相关
             logList,
-            logDetails,
             logDetailList,
             logDetailFilter,
             filteredLogDetails,
             logsLoading,
             queryConditions,
             loadLogs,
-            loadLogDetails,
             loadLogDetailList,
             filterLogDetails,
             clearLogDetailFilter,

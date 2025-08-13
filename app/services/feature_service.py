@@ -176,7 +176,7 @@ def execute_feature(feature_id, client_id):
                 if not all(v is not None for v in config_dict.values()):
                     missing_configs = [k for k, v in config_dict.items() if v is None]
                     ctx.log(f"{feature.get('name', '未知功能')} 功能脚本配置无效，缺少值的配置: {missing_configs}", "error", False)
-                    ctx.error(f"{feature.get('name', '未知功能')} 功能脚本配置无效，缺少值的配置: {missing_configs}")
+                    ctx.fail(f"{feature.get('name', '未知功能')} 功能脚本配置无效，缺少值的配置: {missing_configs}")
                     return
                 # 等待一秒后执行
                 time.sleep(1)

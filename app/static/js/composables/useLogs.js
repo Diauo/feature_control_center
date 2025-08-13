@@ -4,8 +4,7 @@ import api from '../api/api.js';
 export function useLogs(addNotification) {
     // 日志相关状态
     const logs = ref([]);
-    const logDetails = ref(null);
-    const logDetailList = ref([]);  // 新增：存储日志明细列表
+    const logDetailList = ref([]);
     const loading = ref(false);
     
     // 查询条件
@@ -33,19 +32,6 @@ export function useLogs(addNotification) {
         }
     };
     
-    // 获取日志详细内容
-    const loadLogDetails = async (logId) => {
-        try {
-            const response = await api.log.getLogContent(logId);
-            if (response.data.status) {
-                logDetails.value = response.data.data;
-            } else {
-                addNotification(response.data.message || '加载日志详情失败');
-            }
-        } catch (error) {
-            addNotification('加载日志详情时发生错误: ' + error.message);
-        }
-    };
     
     // 获取日志明细内容
     const loadLogDetailList = async (logId) => {
@@ -79,15 +65,13 @@ export function useLogs(addNotification) {
     return {
         // 状态
         logs,
-        logDetails,
-        logDetailList,  // 新增：返回日志明细列表
+        logDetailList,
         loading,
         queryConditions,
         
         // 方法
         loadLogs,
-        loadLogDetails,
-        loadLogDetailList,  // 新增：返回加载日志明细的方法
+        loadLogDetailList,
         setQueryConditions,
         resetQueryConditions
     };

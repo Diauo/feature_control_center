@@ -160,48 +160,12 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <button class="btn-view" @click="loadLogDetails(log.id)">查看</button>
-                                    <button class="btn-view" @click="loadLogDetailList(log.id)">明细</button>
+                                    <button class="btn-view" @click="loadLogDetailList(log.id)">查看日志</button>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                     
-                    <!-- 日志详情模态框 -->
-                    <div class="modal-overlay" v-if="logDetails" @click="logDetails = null"></div>
-                    <div class="modal modal-center" v-if="logDetails">
-                        <div class="modal-content log-detail-modal">
-                            <h3>日志详情</h3>
-                            <div class="log-detail-content">
-                                <div class="log-detail-item">
-                                    <label>功能名称:</label>
-                                    <span>{{ logDetails.feature_name }}</span>
-                                </div>
-                                <div class="log-detail-item">
-                                    <label>RequestId:</label>
-                                    <span>{{ logDetails.request_id }}</span>
-                                </div>
-                                <div class="log-detail-item">
-                                    <label>开始时间:</label>
-                                    <span>{{ logDetails.start_time }}</span>
-                                </div>
-                                <div class="log-detail-item">
-                                    <label>结束时间:</label>
-                                    <span>{{ logDetails.end_time }}</span>
-                                </div>
-                                <div class="log-detail-item">
-                                    <label>状态:</label>
-                                    <span :class="['status-badge', 'status-' + logDetails.status.toLowerCase()]">
-                                        {{ logDetails.status }}
-                                    </span>
-                                </div>
-                                
-                            </div>
-                            <div class="modal-actions">
-                                <button class="btn-primary" @click="logDetails = null">关闭</button>
-                            </div>
-                        </div>
-                    </div>
                     <!-- 日志明细模态框 -->
                     <div class="modal-overlay" v-if="logDetailList.length > 0" @click="logDetailList = []"></div>
                     <div class="modal modal-center" v-if="logDetailList.length > 0">

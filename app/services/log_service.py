@@ -80,37 +80,6 @@ def query_logs(feature_id=None, start_date=None, end_date=None, keyword=None):
     except Exception as e:
         return False, f"查询失败: {str(e)}", []
 
-def get_log_content(log_id):
-    """
-    获取日志详细内容
-    :param log_id: 日志ID
-    :return: (bool, str, dict) 是否成功，提示信息，日志详细内容
-    """
-    try:
-        # 查询日志详情
-        log = FeatureExecutionLog.query.get(log_id)
-        if not log:
-            return False, "未找到指定的日志记录", None
-            
-        # 查询关联的功能信息
-        feature = Feature.query.get(log.feature_id)
-        
-        # 构建返回数据
-        result = {
-            'id': log.id,
-            'feature_id': log.feature_id,
-            'feature_name': feature.name if feature else "未知功能",
-            'request_id': log.request_id,
-            'start_time': log.start_time.strftime('%Y-%m-%d %H:%M:%S') if log.start_time else None,
-            'end_time': log.end_time.strftime('%Y-%m-%d %H:%M:%S') if log.end_time else None,
-            'status': log.status,
-            'client_id': log.client_id
-        }
-        
-        return True, "查询成功", result
-    except Exception as e:
-        return False, f"查询失败: {str(e)}", None
-
 def get_log_details(log_id):
     """
     获取日志明细内容

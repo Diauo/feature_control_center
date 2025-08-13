@@ -29,21 +29,6 @@ def query_logs():
     else:
         return Result.success(data)
 
-@log_bp.route('/get_log_content', methods=['GET'])
-def get_log_content():
-    """
-    获取日志详细内容
-    """
-    log_id = request.args.get('id', type=int)
-    if not log_id:
-        return Result.bad_request("缺少参数 id")
-    
-    status, msg, data = log_service.get_log_content(log_id)
-    if not status:
-        return Result.error(msg, 500)
-    else:
-        return Result.success(data)
-
 @log_bp.route('/get_log_details', methods=['GET'])
 def get_log_details():
     """

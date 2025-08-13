@@ -15,15 +15,6 @@ const log_api = {
     },
 
     /**
-     * 获取日志详细内容
-     * @param {number} id - 日志ID
-     * @returns {Promise}
-     */
-    getLogContent(id) {
-        return api.client.get('/log/get_log_content', { params: { id } });
-    },
-
-    /**
      * 获取日志明细内容
      * @param {number} id - 日志ID
      * @returns {Promise}
