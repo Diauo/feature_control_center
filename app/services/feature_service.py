@@ -156,7 +156,7 @@ def execute_feature(feature_id, client_id):
     app = current_app._get_current_object()
     def run_feature_script():
         with app.app_context():
-            ctx = FeatureExecutionContext(client_id, feature.get("name"))
+            ctx = FeatureExecutionContext(client_id, feature.get("name"), feature_id)
             try:
                 spec = importlib.util.spec_from_file_location("feature_module", script_path)
                 module = importlib.util.module_from_spec(spec)
@@ -186,10 +186,10 @@ def execute_feature(feature_id, client_id):
                     ctx.done(msg, data)
                 else:
                     ctx.log(f"功能执行失败: {msg}", "error", False)
-                    ctx.error(msg, data)
+                    ctx.fail(msg, data)
             except Exception as e:
                 ctx.log(f"执行异常：{e}", "error", False)
-                ctx.error(str(e))
+                ctx.fail(str(e))
 
     t = threading.Thread(target=run_feature_script)
     t.start()

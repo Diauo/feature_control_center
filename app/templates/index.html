@@ -27,7 +27,7 @@
                         :class="['nav-link', currentPage === 'home' ? 'active' : '']">功能列表</a>
                     <a href="#" @click="currentPage = 'cron'"
                         :class="['nav-link', currentPage === 'cron' ? 'active' : '']">定时任务</a>
-                    <a href="#" @click="currentPage = 'logs'"
+                    <a href="#" @click="switchToLogs"
                         :class="['nav-link', currentPage === 'logs' ? 'active' : '']">日志查询</a>
                     <a href="#" @click="switchToConfig"
                         :class="['nav-link', currentPage === 'config' ? 'active' : '']">系统配置</a>
@@ -95,9 +95,136 @@
             <!-- 日志查询页面 -->
             <div v-if="currentPage === 'logs'">
                 <h2>日志查询</h2>
-                <div class="logs">
-                    <div v-for="log in logs" :key="log.id" class="log-entry">
-                        {{ log.message }}
+                
+                <!-- 查询条件 -->
+                <div class="log-query-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>功能:</label>
+                            <select v-model="queryConditions.feature_id">
+                                <option value="">所有功能</option>
+                                <option v-for="feature in features" :key="feature.id" :value="feature.id">
+                                    {{ feature.name }}
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>开始日期:</label>
+                            <input type="date" v-model="queryConditions.start_date">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>结束日期:</label>
+                            <input type="date" v-model="queryConditions.end_date">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>关键字:</label>
+                            <input type="text" v-model="queryConditions.keyword" placeholder="RequestId或状态">
+                        </div>
+                        
+                        <div class="form-group form-actions">
+                            <button class="btn-primary" @click="loadLogs" :disabled="logsLoading">
+                                {{ logsLoading ? '查询中...' : '查询' }}
+                            </button>
+                            <button class="btn-secondary" @click="resetQueryConditions">重置</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 日志列表 -->
+                <div class="logs-container">
+                    <table class="logs-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>功能名称</th>
+                                <th>RequestId</th>
+                                <th>开始时间</th>
+                                <th>结束时间</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="log in logList" :key="log.id">
+                                <td>{{ log.id }}</td>
+                                <td>{{ log.feature_name }}</td>
+                                <td>{{ log.request_id }}</td>
+                                <td>{{ log.start_time }}</td>
+                                <td>{{ log.end_time }}</td>
+                                <td>
+                                    <span :class="['status-badge', 'status-' + log.status.toLowerCase()]">
+                                        {{ log.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn-view" @click="loadLogDetails(log.id)">查看</button>
+                                    <button class="btn-view" @click="loadLogDetailList(log.id)">明细</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- 日志详情模态框 -->
+                    <div class="modal-overlay" v-if="logDetails" @click="logDetails = null"></div>
+                    <div class="modal modal-center" v-if="logDetails">
+                        <div class="modal-content log-detail-modal">
+                            <h3>日志详情</h3>
+                            <div class="log-detail-content">
+                                <div class="log-detail-item">
+                                    <label>功能名称:</label>
+                                    <span>{{ logDetails.feature_name }}</span>
+                                </div>
+                                <div class="log-detail-item">
+                                    <label>RequestId:</label>
+                                    <span>{{ logDetails.request_id }}</span>
+                                </div>
+                                <div class="log-detail-item">
+                                    <label>开始时间:</label>
+                                    <span>{{ logDetails.start_time }}</span>
+                                </div>
+                                <div class="log-detail-item">
+                                    <label>结束时间:</label>
+                                    <span>{{ logDetails.end_time }}</span>
+                                </div>
+                                <div class="log-detail-item">
+                                    <label>状态:</label>
+                                    <span :class="['status-badge', 'status-' + logDetails.status.toLowerCase()]">
+                                        {{ logDetails.status }}
+                                    </span>
+                                </div>
+                                
+                            </div>
+                            <div class="modal-actions">
+                                <button class="btn-primary" @click="logDetails = null">关闭</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 日志明细模态框 -->
+                    <div class="modal-overlay" v-if="logDetailList.length > 0" @click="logDetailList = []"></div>
+                    <div class="modal modal-center" v-if="logDetailList.length > 0">
+                        <div class="modal-content log-detail-modal">
+                            <h3>日志明细</h3>
+                            <!-- 筛选条件 -->
+                            <div class="log-detail-filter">
+                                <input type="text" v-model="logDetailFilter" placeholder="正则表达式筛选">
+                                <button class="btn-primary" @click="filterLogDetails">筛选</button>
+                                <button class="btn-secondary" @click="clearLogDetailFilter">清除</button>
+                            </div>
+                            <!-- 日志明细列表 -->
+                            <div class="log-detail-list">
+                                <div v-for="detail in filteredLogDetails" :key="detail.id" class="log-detail-item">
+                                    <span class="log-timestamp">[{{ detail.timestamp }}]</span>
+                                    <span :class="['log-level', 'log-level-' + detail.level.toLowerCase()]">{{ detail.level }}</span>
+                                    <span class="log-message">{{ detail.message }}</span>
+                                </div>
+                            </div>
+                            <div class="modal-actions">
+                                <button class="btn-primary" @click="logDetailList = []">关闭</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

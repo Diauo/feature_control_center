@@ -44,6 +44,8 @@ def create_app(config_class='app.config.Config'):
     app.register_blueprint(user_bp)
     from app.controllers.config_controller import config_bp
     app.register_blueprint(config_bp, url_prefix='/api/config')
+    from app.controllers.log_controller import log_bp
+    app.register_blueprint(log_bp, url_prefix='/api/log')
 
     # 注册中间件
     log_request(app)

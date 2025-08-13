@@ -721,3 +721,231 @@ button:hover {
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
 }
+/* 日志查询页面样式 */
+.log-query-form {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    flex: 1;
+}
+
+.form-group label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.logs-table th,
+.logs-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.logs-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.logs-table tr:hover {
+    background: #f8f9fa;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-成功 {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-失败 {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.status-运行中 {
+    background: #fff8e1;
+    color: #f57f17;
+}
+
+.status-终止 {
+    background: #fafafa;
+    color: #616161;
+}
+
+.btn-view {
+    background: #1976d2;
+    color: white;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.btn-view:hover {
+    background: #1565c0;
+}
+
+.log-detail-modal {
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.log-detail-content {
+    margin-bottom: 1rem;
+}
+
+.log-detail-item {
+    display: flex;
+    margin-bottom: 0.5rem;
+}
+
+.log-detail-item label {
+    font-weight: 600;
+    width: 100px;
+    margin-right: 1rem;
+}
+
+.log-detail-section {
+    margin-top: 1rem;
+}
+
+.log-detail-section h4 {
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.25rem;
+}
+
+.exception-info,
+.exception-stack,
+.log-content {
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.exception-info pre,
+.exception-stack pre,
+.log-content pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+/* 日志明细筛选样式 */
+.log-detail-filter {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    align-items: center;
+}
+
+.log-detail-filter input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+/* 日志明细列表样式 */
+.log-detail-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    background: #f5f5f5;
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+.log-detail-item {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.log-timestamp {
+    color: #666;
+}
+
+.log-level {
+    padding: 0.1rem 0.25rem;
+    border-radius: 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.log-level-info {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.log-level-warn {
+    background: #fff8e1;
+    color: #f57f17;
+}
+
+.log-level-error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.log-message {
+    flex: 1;
+    word-break: break-all;
+}

@@ -1,16 +1,35 @@
 from flask_socketio import emit
 from app.ws_server import socketio, client_sid_map
 import logging
+import uuid
+from datetime import datetime
+from app import db
+from app.models.base_models import FeatureExecutionLog
+from app.models.base_models import FeatureExecutionLog, FeatureExecutionLogDetail
 import os
 
 LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
 
 class FeatureExecutionContext:
-    def __init__(self, client_id, feature_name=None, namespace="/feature"):
+    def __init__(self, client_id, feature_name=None, feature_id=None, namespace="/feature"):
         self.client_id = client_id
         self.namespace = namespace
         self.feature_name = feature_name or "未知功能"
+        self.feature_id = feature_id
+        # 生成唯一的requestId
+        self.request_id = str(uuid.uuid4())
+        
+        # 初始化数据库日志记录
+        self.db_log = FeatureExecutionLog(
+            feature_id=self.feature_id,
+            request_id=self.request_id,
+            start_time=datetime.now(),
+            status="运行中",
+            client_id=self.client_id
+        )
+        db.session.add(self.db_log)
+        db.session.commit()
 
         # ws handler: 只发纯消息
         self.logger = logging.getLogger(f"feature-{client_id}")
@@ -35,12 +54,28 @@ class FeatureExecutionContext:
             getattr(self.logger, level)(message)
         else:
             self.logger.info(message)
+        
+        # 同时写入数据库明细表
+        log_detail = FeatureExecutionLogDetail(
+            log_id=self.db_log.id,
+            level=level.upper(),
+            message=message,
+            request_id=self.request_id
+        )
+        db.session.add(log_detail)
+        db.session.commit()
+        
         # 恢复handler为默认（下次log不影响）
         for handler in self.logger.handlers:
             if isinstance(handler, WebSocketLogHandler):
                 handler.set_send_ws(True)
 
-    def done(self, msg="功能已完成", data=None):
+    def done(self, msg="功能执行已完成", data=None):
+        # 更新数据库日志记录
+        self.db_log.end_time = datetime.now()
+        self.db_log.status = "成功"
+        db.session.commit()
+        
         emit('feature_done', {
             'client_id': self.client_id,
             'status': 'success',
@@ -48,7 +83,12 @@ class FeatureExecutionContext:
             'data': data or {}
         }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
 
-    def error(self, msg="功能执行失败", data=None):
+    def fail(self, msg="功能执行失败", data=None):
+        # 更新数据库日志记录
+        self.db_log.end_time = datetime.now()
+        self.db_log.status = "失败"
+        db.session.commit()
+        
         emit('feature_done', {
             'client_id': self.client_id,
             'status': 'error',
@@ -56,7 +96,29 @@ class FeatureExecutionContext:
             'data': data or {}
         }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
 
+    def error(self, msg="功能执行失败", data=None, exception=None):
+        # 记录错误日志
+        if exception:
+            import traceback
+            self.log(f"错误信息: {msg}", "error")
+            self.log(f"异常信息: {str(exception)}", "error")
+            self.log(f"异常堆栈: {traceback.format_exc()}", "error")
+        else:
+            self.log(f"错误信息: {msg}", "error")
+            
+        emit('feature_error', {
+            'client_id': self.client_id,
+            'status': 'error',
+            'msg': msg,
+            'data': data or {}
+        }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
+
     def terminate(self, reason="任务被终止"):
+        # 更新数据库日志记录
+        self.db_log.end_time = datetime.now()
+        self.db_log.status = "终止"
+        db.session.commit()
+        
         emit('feature_done', {
             'client_id': self.client_id,
             'status': 'terminated',

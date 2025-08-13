@@ -10,6 +10,7 @@ import { useCategories } from './composables/useCategories.js';
 import { useConfig } from './composables/useConfig.js';
 import { useCustomers } from './composables/useCustomers.js';
 import { useAuth } from './composables/useAuth.js';
+import { useLogs } from './composables/useLogs.js';
 
 createApp({
     setup() {
@@ -75,6 +76,52 @@ createApp({
         } = useConfig(currentUser, addNotification, api);
         
         const { logout } = useAuth(authService, api);
+        
+        const {
+            logs: logList,
+            logDetails,
+            logDetailList,
+            loading: logsLoading,
+            queryConditions,
+            loadLogs,
+            loadLogDetails,
+            loadLogDetailList,
+            setQueryConditions,
+            resetQueryConditions
+        } = useLogs(addNotification);
+        
+        // 日志明细筛选相关
+        const logDetailFilter = ref('');
+        const filteredLogDetails = ref([]);
+        
+        // 筛选日志明细
+        const filterLogDetails = () => {
+            if (!logDetailFilter.value) {
+                filteredLogDetails.value = logDetailList.value;
+                return;
+            }
+            
+            try {
+                const regex = new RegExp(logDetailFilter.value, 'i');
+                filteredLogDetails.value = logDetailList.value.filter(detail =>
+                    regex.test(detail.message)
+                );
+            } catch (e) {
+                addNotification('正则表达式格式错误: ' + e.message);
+                filteredLogDetails.value = logDetailList.value;
+            }
+        };
+        
+        // 清除日志明细筛选
+        const clearLogDetailFilter = () => {
+            logDetailFilter.value = '';
+            filteredLogDetails.value = logDetailList.value;
+        };
+        
+        // 当logDetailList变化时，更新filteredLogDetails
+        watch(logDetailList, (newList) => {
+            filteredLogDetails.value = newList;
+        });
 
         // 监听客户选择变化
         watch(currentCustomer, async (newCustomer, oldCustomer) => {
@@ -112,6 +159,11 @@ createApp({
         const switchToConfig = async () => {
             currentPage.value = 'config';
             await loadConfigs();
+        };
+        
+        const switchToLogs = async () => {
+            currentPage.value = 'logs';
+            await loadLogs();
         };
 
         // 初始化
@@ -226,9 +278,26 @@ createApp({
             // 页面切换
             switchToHome,
             switchToConfig,
+            switchToLogs,
             
             // 认证相关
-            logout
+            logout,
+            
+            // 日志相关
+            logList,
+            logDetails,
+            logDetailList,
+            logDetailFilter,
+            filteredLogDetails,
+            logsLoading,
+            queryConditions,
+            loadLogs,
+            loadLogDetails,
+            loadLogDetailList,
+            filterLogDetails,
+            clearLogDetailFilter,
+            setQueryConditions,
+            resetQueryConditions
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

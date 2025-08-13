@@ -88,5 +88,32 @@ class Config(Base_model):
     feature_id = db.Column(db.Integer, unique=False, nullable=False, default=0)
     feature_name = ""
 
+
+class FeatureExecutionLog(Base_model):
+    __tablename__ = 'feature_execution_log'
+    __info__ = ''' 功能执行日志
+        记录每次功能执行的结果信息
+    '''
+    feature_id = db.Column(db.Integer, unique=False, nullable=False)
+    request_id = db.Column(db.String(64), unique=True, nullable=False)
+    start_time = db.Column(db.DateTime, nullable=True)
+    end_time = db.Column(db.DateTime, nullable=True)
+    status = db.Column(db.String(32), unique=False, nullable=True)  # 运行中/成功/失败
+    client_id = db.Column(db.String(64), unique=False, nullable=True)
+    
+    # 关联功能名称，便于查询
+    feature_name = ""
+
+class FeatureExecutionLogDetail(Base_model):
+    __tablename__ = 'feature_execution_log_detail'
+    __info__ = ''' 功能执行日志明细
+        记录每次功能执行的详细运行时日志信息
+    '''
+    log_id = db.Column(db.Integer, unique=False, nullable=False)  # 关联FeatureExecutionLog的ID
+    timestamp = db.Column(db.DateTime, nullable=False, default=datetime.now)
+    level = db.Column(db.String(16), unique=False, nullable=True)  # 日志级别 INFO/WARN/ERROR
+    message = db.Column(db.Text, unique=False, nullable=True)
+    request_id = db.Column(db.String(64), unique=False, nullable=False)
+ 
 # 最后引入模型事件
 from . import models_events

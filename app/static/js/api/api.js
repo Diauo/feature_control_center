@@ -65,12 +65,14 @@ import customer_api from './customer_api.js';
 import feature_api from './feature_api.js';
 import user_api from './user_api.js';
 import config_api from './config_api.js'; // 新增配置API
+import log_api from './log_api.js'; // 新增日志API
 
 const api = {
     category: category_api,
     customer: customer_api,
     feature: feature_api,
     user: user_api,
+log: log_api, // 新增日志API
     config: config_api, // 新增配置API
     client: apiClient // 导出axios实例，供直接使用
 };
