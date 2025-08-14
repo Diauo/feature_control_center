@@ -42,6 +42,9 @@ export function useLogs(addNotification) {
             } else {
                 addNotification(response.data.message || '加载日志明细失败');
             }
+            if( logDetailList.value.length === 0) {
+                addNotification('没有找到相关日志明细');
+            }
         } catch (error) {
             addNotification('加载日志明细时发生错误: ' + error.message);
         }

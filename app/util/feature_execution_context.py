@@ -1,13 +1,12 @@
 from flask_socketio import emit
 from app.ws_server import socketio, client_sid_map
 import logging
-import uuid
 from datetime import datetime
 from app import db
 from app.models.base_models import FeatureExecutionLog
 from app.models.base_models import FeatureExecutionLog, FeatureExecutionLogDetail
 import os
-
+import time
 LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -18,8 +17,11 @@ class FeatureExecutionContext:
         self.feature_name = feature_name or "未知功能"
         self.feature_id = feature_id
         # 生成唯一的requestId
-        self.request_id = str(uuid.uuid4())
-        
+        days_since_epoch = int(time.time()) // 86400 
+        max_id = db.session.query(db.func.max(FeatureExecutionLog.id)).scalar() or 0
+        next_id = max_id + 1
+        self.request_id = f"{days_since_epoch:05d}{next_id}"
+
         # 初始化数据库日志记录
         self.db_log = FeatureExecutionLog(
             feature_id=self.feature_id,
@@ -44,6 +46,9 @@ class FeatureExecutionContext:
             file_handler = logging.FileHandler(log_file, encoding="utf-8")
             file_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
             self.logger.addHandler(file_handler)
+
+        
+        self.log(f"初始化完成，本次请求ID：{self.request_id}", "info")
 
     def log(self, message, level="info", send_ws=True):
         # 只写文件日志
