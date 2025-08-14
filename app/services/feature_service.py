@@ -10,6 +10,8 @@ from app.util.feature_execution_context import FeatureExecutionContext
 from flask import current_app
 import threading
 import time
+import zipfile
+import shutil
 
 def get_all_feature():
     sql = text('''
@@ -149,10 +151,18 @@ def execute_feature(feature_id, client_id):
         return False, "功能脚本文件名为空", None
     
     script_path = os.path.join(base_dir, feature_file_name)
-    if not os.path.isfile(script_path):
+    
+    # 4. 检查路径是文件还是目录
+    if os.path.isdir(script_path):
+        # 如果是目录，检查是否存在__init__.py文件
+        init_file = os.path.join(script_path, "__init__.py")
+        if not os.path.exists(init_file):
+            return False, f"模块目录中缺少__init__.py文件: {script_path}", None
+        script_path = init_file
+    elif not os.path.isfile(script_path):
         return False, f"功能脚本不存在: {script_path}", None
 
-    # 4. 动态加载并异步执行 run()
+    # 5. 动态加载并异步执行 run()
     app = current_app._get_current_object()
     def run_feature_script():
         with app.app_context():
@@ -219,8 +229,6 @@ def register_feature(file, name, description, customer_id, category_id):
         
         # 3. 生成文件名
         filename = file.filename
-        if not filename.endswith('.py'):
-            filename += '.py'
         
         # 4. 保存文件到上传目录
         file_path = os.path.join(uploaded_feature_dir, filename)
@@ -235,7 +243,20 @@ def register_feature(file, name, description, customer_id, category_id):
         
         file.save(file_path)
         
-        # 6. 调用新的功能注册服务注册该文件
+        # 6. 如果是压缩包，解压到同名目录
+        if filename.endswith('.zip'):
+            # 创建解压目录
+            extract_dir = os.path.join(uploaded_feature_dir, os.path.splitext(filename)[0])
+            os.makedirs(extract_dir, exist_ok=True)
+            
+            # 解压文件
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
+            
+            # 更新文件路径为解压后的目录
+            file_path = extract_dir
+        
+        # 7. 调用新的功能注册服务注册该文件
         from app.services.feature_register_service import register_uploaded_feature
         status, msg = register_uploaded_feature(file_path, name, description, customer_id, category_id)
         
@@ -243,10 +264,19 @@ def register_feature(file, name, description, customer_id, category_id):
             logger.info(f"功能文件 {filename} 注册成功")
             return True, "功能注册成功"
         else:
-            # 注册失败，删除已保存的文件
+            # 注册失败，删除已保存的文件或目录
             if os.path.exists(file_path):
-                os.remove(file_path)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
             return False, msg
     except Exception as e:
         logger.error(f"功能注册失败: {e}")
+        # 删除已保存的文件或目录
+        if 'file_path' in locals() and os.path.exists(file_path):
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
         return False, f"功能注册失败: {str(e)}"

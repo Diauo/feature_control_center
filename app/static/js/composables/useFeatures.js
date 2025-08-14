@@ -217,12 +217,13 @@ export function useFeatures(currentCustomer, currentUser, addNotification, api) 
     
     // 处理文件上传
     const handleFileUpload = (event) => {
+        debugger;
         const file = event.target.files[0];
         if (!file) return;
         
         // 检查文件类型
-        if (!file.name.endsWith('.py')) {
-            addNotification('请选择Python文件(.py)');
+        if (!file.name.endsWith('.py') && !file.name.endsWith('.zip') && !file.name.endsWith('.rar')) {
+            addNotification('仅支持上传 .py, .zip 或 .rar 文件');
             return;
         }
         
