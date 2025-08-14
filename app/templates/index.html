@@ -42,7 +42,6 @@
         <div class="content">
             <!-- 首页 -->
             <div v-if="currentPage === 'home'">
-                <h2>功能列表</h2>
                 <div class="feature-actions" v-if="currentUser && currentUser.role === 'admin'">
                     <button class="btn-primary" @click="openRegisterFeatureModal">注册新功能</button>
                 </div>
@@ -54,19 +53,19 @@
                             <div class="button" @click="toggleCategoryEdite()">编辑</div>
                         </div>
                         <div class="category">
-                            <div class="category-title" @click="toggleCategory({id: null})">所有功能</div>
+                            <div class="category-title" :class="{ 'category-selected': selectedCategory === null }" @click="handleCategoryToggle({id: null})">所有功能</div>
                         </div>
                         <div v-for="category in categories" :key="category.order_id" class="category">
                             <!-- 顶层菜单 -->
-                            <div class="category-title">
+                            <div class="category-title" :class="{ 'category-selected': selectedCategory === category.id }">
                                 {{ category.name }}
                                 <div v-if="categorieEditMode" class="category-active-zone --category-active-zone-edit"
-                                    @click="toggleCategory(category)"></div>
+                                    @click="handleCategoryToggle(category)"></div>
                                 <div v-if="!categorieEditMode"
                                     class="category-active-zone --category-active-zone-normal"
-                                    @click="toggleCategory(category)"></div>
+                                    @click="handleCategoryToggle(category)"></div>
                                 <span v-if="categorieEditMode" class="button button--add-category"
-                                    @click="openAddCategoryModal(category, $event)">📝<span>
+                                    @click="openAddCategoryModal(category, $event)">📝</span>
                             </div>
                         </div>
                         <div class="category">
@@ -85,7 +84,6 @@
 
             <!-- 定时任务页面 -->
             <div v-if="currentPage === 'cron'">
-                <h2>定时任务配置</h2>
                 <div class="cron-editor">
                     <input type="text" v-model="cronExpression" placeholder="Cron表达式">
                     <button class="btn-confirm" @click="saveCronJob">保存</button>
@@ -94,7 +92,6 @@
 
             <!-- 日志查询页面 -->
             <div v-if="currentPage === 'logs'">
-                <h2>日志查询</h2>
                 
                 <!-- 查询条件 -->
                 <div class="log-query-form">
@@ -195,7 +192,6 @@
 
             <!-- 系统配置页面 -->
             <div v-if="currentPage === 'config'">
-                <h2>系统配置管理</h2>
                 <div id="config-management">
                     <!-- 操作按钮区域 -->
                     <div class="config-actions" v-if="currentUser && currentUser.role === 'admin'">

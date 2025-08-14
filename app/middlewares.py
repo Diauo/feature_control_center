@@ -5,8 +5,8 @@ from app.util import log_utils
 
 def log_request(app):
     @app.before_request
-    def log_path():
-        print(f"全局请求路径：{request.path}")
+    def just_pass():
+        pass
 
 # 配置无需认证的接口白名单
 JWT_WHITELIST = [

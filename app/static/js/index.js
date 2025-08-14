@@ -1,6 +1,5 @@
 const { createApp, ref, computed, onMounted, provide, nextTick, watch } = Vue
 import api from './api/api.js';
-import { getClientUUID } from './utils.js';
 import SidebarMenu from './composables/defineComponent.js';
 import authService from './services/authService.js';
 import { useNotifications } from './composables/useNotifications.js';
@@ -33,14 +32,48 @@ createApp({
             selectedCategory,
             categorieEditMode,
             filteredCategories,
-            buildCategoryReferenceMap,
             toggleCategory,
             toggleCategoryEdite,
             selectCategory,
             addCategory,
             delCategory,
             openAddCategoryModal
-        } = useCategories(currentCustomer, addNotification, openModal, closeModal, modal, api);
+        } = useCategories(currentUser, currentCustomer, addNotification, openModal, closeModal, modal, api);
+        
+        // 处理分类切换并加载相应的功能
+        const handleCategoryToggle = async (category) => {
+            const result = await toggleCategory(category);
+            
+            if (result && result.type === 'reloadFeatures') {
+                // 根据返回的指令加载功能
+                if (result.method === 'all') {
+                    // 加载所有功能
+                    await loadFeaturesByCustomer();
+                } else if (result.method === 'customer' && result.customerId) {
+                    // 根据客户ID加载功能
+                    const response = await api.feature.get_feature_by_customer_id(result.customerId);
+                    if (response.data.status) {
+                        features.value = response.data.data;
+                    } else {
+                        addNotification(response.data.message || '加载功能列表失败');
+                    }
+                } else if (result.method === 'category') {
+                    // 根据分类ID加载功能
+                    const response = await api.feature.get_feature_by_category_id(
+                        result.categoryId,
+                        result.customerId !== undefined ? result.customerId : null
+                    );
+                    if (response.data.status) {
+                        features.value = response.data.data;
+                    } else {
+                        addNotification(response.data.message || '加载功能列表失败');
+                    }
+                }
+            } else if (result && result.type === 'error') {
+                // 处理错误情况
+                addNotification(result.message || '操作失败');
+            }
+        };
         
         const {
             features,
@@ -148,7 +181,6 @@ createApp({
             const response = await api.category.get_all_category();
             if (response.data.status) {
                 categories.value = response.data.data;
-                buildCategoryReferenceMap(categories.value);
             } else {
                 addNotification(response.data.message || '加载分类列表失败');
             }
@@ -192,7 +224,6 @@ createApp({
             const response = await api.category.get_all_category();
             if (response.data.status) {
                 categories.value = response.data.data;
-                buildCategoryReferenceMap(categories.value);
             } else {
                 addNotification(response.data.message || '加载分类列表失败');
             }
@@ -233,7 +264,7 @@ createApp({
             selectedCategory,
             categorieEditMode,
             filteredCategories,
-            toggleCategory,
+            handleCategoryToggle,
             selectCategory,
             openAddCategoryModal,
             toggleCategoryEdite,

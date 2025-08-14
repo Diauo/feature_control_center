@@ -1,6 +1,6 @@
 const { ref, computed } = Vue;
 
-export function useCategories(currentCustomer, addNotification, openModal, closeModal, modal, api) {
+export function useCategories(currentUser, currentCustomer, addNotification, openModal, closeModal, modal, api) {
     const categories = ref([]);
     const selectedCategory = ref(null);
     const categorieEditMode = ref(false);
@@ -16,23 +16,6 @@ export function useCategories(currentCustomer, addNotification, openModal, close
         );
     });
 
-    // 构建分类引用映射，用于通过映射直接修改节点
-    const buildCategoryReferenceMap = (nodes) => {
-        if (!nodes || !Array.isArray(nodes)) return;
-        categoriesReferenceMap.clear();
-        
-        const buildMap = (nodeList) => {
-            nodeList.forEach((node) => {
-                categoriesReferenceMap.set(node.id, node);
-                if (node.child && node.child.length > 0) {
-                    buildMap(node.child);
-                }
-            });
-        };
-        
-        buildMap(nodes);
-    };
-
     // 切换分类编辑模式
     const toggleCategoryEdite = () => {
         categorieEditMode.value = !categorieEditMode.value;
@@ -40,41 +23,38 @@ export function useCategories(currentCustomer, addNotification, openModal, close
 
     // 切换分类展开/收起
     const toggleCategory = async (category) => {
-        if (categorieEditMode.value) {
-            const collapseChildren = (cat) => {
-                if (cat.child && cat.child.length > 0) {
-                    cat.child.forEach(child => {
-                        child.expanded = false;
-                        collapseChildren(child);
-                    });
-                }
-            };
-
-            category.expanded = !category.expanded;
-            if (!category.expanded) {
-                collapseChildren(category);
-            }
-            selectCategory();
-            return;
-        }
+        // 设置选中的分类
+        selectedCategory.value = category ? category.id : null;
         
-        selectedCategory.value = category.id;
-        
-        if (category.id === null || category.id === undefined) {
-            // 加载所有功能的逻辑需要在调用处处理
-            return { type: 'loadAllFeatures' };
-        } else {
-            try {
-                const response = await api.feature.get_feature_by_category_id(category.id, currentCustomer.value);
-                if (response.data.status) {
-                    return { type: 'loadCategoryFeatures', data: response.data.data };
+        // 如果分类为空，说明点击的是"所有功能选项卡"
+        if (!category || category.id === null) {
+            // 如果客户ID为空，检查当前用户是否为管理员
+            if (!currentCustomer.value) {
+                if (currentUser.value && currentUser.value.role === 'admin') {
+                    // 管理员可以查看所有功能，不传客户ID
+                    return { type: 'reloadFeatures', method: 'all' };
                 } else {
-                    addNotification(response.data.message || '加载功能列表失败');
-                    return { type: 'error' };
+                    // 非管理员且没有选择有效客户，报错
+                    addNotification('错误：没有选择有效的客户');
+                    return { type: 'error', message: '没有选择有效的客户' };
                 }
-            } catch (error) {
-                addNotification('加载功能时发生错误: ' + error.message);
-                return { type: 'error' };
+            } else {
+                // 有客户ID，调用get_feature_by_customer_id查询当前客户下的所有功能
+                return { type: 'reloadFeatures', method: 'customer', customerId: currentCustomer.value };
+            }
+        } else {
+            // 有具体分类，调用get_feature_by_category_id查询分类下的功能
+            // 如果客户ID为空且当前用户是管理员，则不传客户ID
+            if (!currentCustomer.value && currentUser.value && currentUser.value.role === 'admin') {
+                return { type: 'reloadFeatures', method: 'category', categoryId: category.id };
+            } else {
+                // 传入客户ID（即使是空值也会传）
+                return {
+                    type: 'reloadFeatures',
+                    method: 'category',
+                    categoryId: category.id,
+                    customerId: currentCustomer.value
+                };
             }
         }
     };
@@ -217,7 +197,6 @@ export function useCategories(currentCustomer, addNotification, openModal, close
         selectedCategory,
         categorieEditMode,
         filteredCategories,
-        buildCategoryReferenceMap,
         toggleCategory,
         toggleCategoryEdite,
         selectCategory,
