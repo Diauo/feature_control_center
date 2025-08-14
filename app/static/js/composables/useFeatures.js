@@ -222,8 +222,8 @@ export function useFeatures(currentCustomer, currentUser, addNotification, api) 
         if (!file) return;
         
         // 检查文件类型
-        if (!file.name.endsWith('.py') && !file.name.endsWith('.zip') && !file.name.endsWith('.rar')) {
-            addNotification('仅支持上传 .py, .zip 或 .rar 文件');
+        if (!file.name.endsWith('.py') && !file.name.endsWith('.zip')) {
+            addNotification('仅支持上传 .py 或 .zip文件');
             return;
         }
         

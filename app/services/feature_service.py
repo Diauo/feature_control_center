@@ -253,6 +253,14 @@ def register_feature(file, name, description, customer_id, category_id):
             with zipfile.ZipFile(file_path, 'r') as zip_ref:
                 zip_ref.extractall(extract_dir)
             
+            #解压完成后删除文件
+            os.remove(file_path)
+
+            # 验证解压后的目录是否存在__init__.py文件
+            init_file = os.path.join(extract_dir, "__init__.py")
+            if not os.path.exists(init_file):
+                return False, f"不是有效的功能脚本包，缺少 __init__.py 文件"
+            
             # 更新文件路径为解压后的目录
             file_path = extract_dir
         
