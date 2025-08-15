@@ -136,7 +136,7 @@ def get_feature_by_id(feature_id):
         return False, f"未找到ID为[{feature_id}]的功能", None
     return True, "成功", feature.to_dict()
 
-def execute_feature(feature_id, client_id):
+def execute_feature(feature_id, client_id, execution_type="manual"):
     # 1. 查询功能信息
     ok, msg, feature = feature_service.get_feature_by_id(feature_id)
     if not ok:
@@ -166,7 +166,7 @@ def execute_feature(feature_id, client_id):
     app = current_app._get_current_object()
     def run_feature_script():
         with app.app_context():
-            ctx = FeatureExecutionContext(client_id, feature.get("name"), feature_id)
+            ctx = FeatureExecutionContext(client_id, feature.get("name"), feature_id, execution_type=execution_type)
             try:
                 spec = importlib.util.spec_from_file_location("feature_module", script_path)
                 module = importlib.util.module_from_spec(spec)

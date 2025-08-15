@@ -8,6 +8,7 @@ const log_api = {
      * @param {string} params.start_date - 开始日期
      * @param {string} params.end_date - 结束日期
      * @param {string} params.keyword - 关键字
+     * @param {string} params.execution_type - 执行类型 (manual/scheduled)
      * @returns {Promise}
      */
     query(params) {

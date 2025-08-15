@@ -957,3 +957,131 @@ button:hover {
     flex: 1;
     word-break: break-all;
 }
+
+/* 定时任务页面样式 */
+.scheduled-tasks-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.scheduled-tasks-actions {
+    display: flex;
+    justify-content: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.scheduled-tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.scheduled-tasks-table th,
+.scheduled-tasks-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.scheduled-tasks-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+.scheduled-tasks-table tr:hover {
+    background: #f8f9fa;
+}
+
+.scheduled-tasks-table tr:last-child td {
+    border-bottom: none;
+}
+
+.status-active {
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-inactive {
+    background: #ffebee;
+    color: #c62828;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.scheduled-task-modal .modal-content {
+    padding: 1.5rem;
+}
+
+.scheduled-task-modal .form-group {
+    margin-bottom: 1rem;
+}
+
+.scheduled-task-modal .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.scheduled-task-modal .form-group input,
+.scheduled-task-modal .form-group select,
+.scheduled-task-modal .form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.scheduled-task-modal .form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.scheduled-task-modal .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.btn-edit {
+    background: #2196f3;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #1976d2;
+}
+
+.btn-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+}
+
+/* 定时任务描述列样式优化 */
+.scheduled-tasks-table td div[title] {
+    cursor: help;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.scheduled-tasks-table td div[title]:hover {
+    background-color: #f0f0f0;
+}

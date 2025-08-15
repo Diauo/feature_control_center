@@ -10,6 +10,7 @@ import { useConfig } from './composables/useConfig.js';
 import { useCustomers } from './composables/useCustomers.js';
 import { useAuth } from './composables/useAuth.js';
 import { useLogs } from './composables/useLogs.js';
+import { useScheduledTasks } from './composables/useScheduledTasks.js';
 
 createApp({
     setup() {
@@ -121,6 +122,20 @@ createApp({
             resetQueryConditions
         } = useLogs(addNotification);
         
+        const {
+            scheduledTasks,
+            scheduledTasksLoading,
+            scheduledTaskModal,
+            loadScheduledTasks,
+            openAddScheduledTaskModal,
+            openEditScheduledTaskModal,
+            closeScheduledTaskModal,
+            saveScheduledTask,
+            deleteScheduledTask,
+            enableScheduledTask,
+            disableScheduledTask
+        } = useScheduledTasks(addNotification, features);
+        
         // 日志明细筛选相关
         const logDetailFilter = ref('');
         const filteredLogDetails = ref([]);
@@ -159,18 +174,6 @@ createApp({
             await loadFeaturesByCustomer();
         });
 
-        // 定时任务相关
-        const cronExpression = ref('');
-        const logs = ref([
-            { id: 1, message: '系统启动 - 2024-03-12 10:00:00' },
-            { id: 2, message: '功能1执行成功 - 2024-03-12 10:05:00' },
-            { id: 3, message: '定时任务更新 - 2024-03-12 10:10:00' },
-        ]);
-
-        // 保存定时任务
-        const saveCronJob = () => {
-            addNotification('定时任务已保存');
-        };
 
         // 页面切换方法
         const switchToHome = async () => {
@@ -194,6 +197,11 @@ createApp({
         const switchToLogs = async () => {
             currentPage.value = 'logs';
             await loadLogs();
+        };
+        
+        const switchToCron = async () => {
+            currentPage.value = 'cron';
+            await loadScheduledTasks();
         };
 
         // 初始化
@@ -230,7 +238,35 @@ createApp({
             
             // 加载配置
             await loadConfigs();
+            
+            // 加载定时任务
+            await loadScheduledTasks();
         });
+
+        // 格式化时间显示
+        const formatDateTime = (dateString) => {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        };
+
+        // 格式化日期显示
+        const formatDate = (dateString) => {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        };
 
         // 提供依赖注入
         provide('openAddCategoryModal', openAddCategoryModal);
@@ -299,15 +335,11 @@ createApp({
             reloadConfig,
             cleanupConfig,
             
-            // 定时任务相关
-            cronExpression,
-            logs,
-            saveCronJob,
-            
             // 页面切换
             switchToHome,
             switchToConfig,
             switchToLogs,
+            switchToCron,
             
             // 认证相关
             logout,
@@ -324,7 +356,22 @@ createApp({
             filterLogDetails,
             clearLogDetailFilter,
             setQueryConditions,
-            resetQueryConditions
+            resetQueryConditions,
+            
+            // 定时任务相关
+            scheduledTasks,
+            scheduledTasksLoading,
+            scheduledTaskModal,
+            loadScheduledTasks,
+            openAddScheduledTaskModal,
+            openEditScheduledTaskModal,
+            closeScheduledTaskModal,
+            saveScheduledTask,
+            deleteScheduledTask,
+            enableScheduledTask,
+            disableScheduledTask,
+            formatDateTime,
+            formatDate
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

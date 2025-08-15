@@ -4,13 +4,14 @@ from sqlalchemy import and_, or_, desc
 from datetime import datetime
 import json
 
-def query_logs(feature_id=None, start_date=None, end_date=None, keyword=None):
+def query_logs(feature_id=None, start_date=None, end_date=None, keyword=None, execution_type=None):
     """
     查询日志
     :param feature_id: 功能ID
     :param start_date: 开始日期
     :param end_date: 结束日期
     :param keyword: 关键字
+    :param execution_type: 执行类型 (manual/scheduled)
     :return: (bool, str, list) 是否成功，提示信息，日志列表
     """
     try:
@@ -23,6 +24,7 @@ def query_logs(feature_id=None, start_date=None, end_date=None, keyword=None):
             FeatureExecutionLog.end_time,
             FeatureExecutionLog.status,
             FeatureExecutionLog.client_id,
+            FeatureExecutionLog.execution_type,
             Feature.name.label('feature_name')
         ).join(Feature, FeatureExecutionLog.feature_id == Feature.id)
         
@@ -52,6 +54,10 @@ def query_logs(feature_id=None, start_date=None, end_date=None, keyword=None):
                 Feature.name.like(f'%{keyword}%')
             ))
             
+        # 按执行类型过滤
+        if execution_type:
+            filters.append(FeatureExecutionLog.execution_type == execution_type)
+            
         # 应用过滤条件
         if filters:
             query = query.filter(and_(*filters))
@@ -73,6 +79,7 @@ def query_logs(feature_id=None, start_date=None, end_date=None, keyword=None):
                 'end_time': log.end_time.strftime('%Y-%m-%d %H:%M:%S') if log.end_time else None,
                 'status': log.status,
                 'client_id': log.client_id,
+                'execution_type': log.execution_type,
                 'feature_name': log.feature_name
             })
             

@@ -100,6 +100,7 @@ class FeatureExecutionLog(Base_model):
     end_time = db.Column(db.DateTime, nullable=True)
     status = db.Column(db.String(32), unique=False, nullable=True)  # 运行中/成功/失败
     client_id = db.Column(db.String(64), unique=False, nullable=True)
+    execution_type = db.Column(db.String(16), unique=False, nullable=False, default="manual")  # manual/scheduled
     
     # 关联功能名称，便于查询
     feature_name = ""
@@ -115,5 +116,21 @@ class FeatureExecutionLogDetail(Base_model):
     message = db.Column(db.Text, unique=False, nullable=True)
     request_id = db.Column(db.String(64), unique=False, nullable=False)
  
+class ScheduledTask(Base_model):
+    __tablename__ = 'scheduled_task'
+    __info__ = ''' 定时任务
+        用于定时执行功能的计划任务
+    '''
+    feature_id = db.Column(db.Integer, unique=False, nullable=False)
+    name = db.Column(db.String(64), unique=False, nullable=False)
+    description = db.Column(db.String(256), unique=False, nullable=True)
+    cron_expression = db.Column(db.String(64), unique=False, nullable=False)
+    is_active = db.Column(db.Boolean, unique=False, nullable=False, default=False)
+    last_run_time = db.Column(db.DateTime, nullable=True)
+    next_run_time = db.Column(db.DateTime, nullable=True)
+    
+    # 关联功能名称，便于查询
+    feature_name = ""
+
 # 最后引入模型事件
 from . import models_events

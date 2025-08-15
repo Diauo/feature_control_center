@@ -25,7 +25,7 @@
                 <div class="nav-links">
                     <a href="#" @click="switchToHome"
                         :class="['nav-link', currentPage === 'home' ? 'active' : '']">功能列表</a>
-                    <a href="#" @click="currentPage = 'cron'"
+                    <a href="#" @click="switchToCron"
                         :class="['nav-link', currentPage === 'cron' ? 'active' : '']">定时任务</a>
                     <a href="#" @click="switchToLogs"
                         :class="['nav-link', currentPage === 'logs' ? 'active' : '']">日志查询</a>
@@ -84,9 +84,102 @@
 
             <!-- 定时任务页面 -->
             <div v-if="currentPage === 'cron'">
-                <div class="cron-editor">
-                    <input type="text" v-model="cronExpression" placeholder="Cron表达式">
-                    <button class="btn-confirm" @click="saveCronJob">保存</button>
+                <div class="scheduled-tasks-container">
+                    <!-- 操作按钮 -->
+                    <div class="scheduled-tasks-actions">
+                        <button class="btn-primary" @click="openAddScheduledTaskModal">新增定时任务</button>
+                        <button class="btn-secondary" @click="loadScheduledTasks" :disabled="scheduledTasksLoading">
+                            {{ scheduledTasksLoading ? '刷新中...' : '刷新' }}
+                        </button>
+                    </div>
+                    
+                    <!-- 定时任务列表 -->
+                    <div class="scheduled-tasks-list">
+                        <table class="scheduled-tasks-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>任务名称</th>
+                                    <th>关联功能</th>
+                                    <th>Cron表达式</th>
+                                    <th>状态</th>
+                                    <th>上次执行</th>
+                                    <th>下次执行</th>
+                                    <th>描述</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="task in scheduledTasks" :key="task.id">
+                                    <td>{{ task.id }}</td>
+                                    <td>{{ task.name }}</td>
+                                    <td>{{ task.feature_name }}</td>
+                                    <td>{{ task.cron_expression }}</td>
+                                    <td>
+                                        <span :class="['status-badge', task.is_active ? 'status-active' : 'status-inactive']">
+                                            {{ task.is_active ? '启用' : '禁用' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ formatDateTime(task.last_run_time) }}</td>
+                                    <td>{{ formatDateTime(task.next_run_time) }}</td>
+                                    <td>
+                                        <div :title="task.description || '无描述'">
+                                            {{ task.description ? (task.description.length > 20 ? task.description.substring(0, 20) + '...' : task.description) : '-' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn-edit" @click="openEditScheduledTaskModal(task)">编辑</button>
+                                        <button v-if="task.is_active" class="btn-warning" @click="disableScheduledTask(task.id)">禁用</button>
+                                        <button v-else class="btn-confirm" @click="enableScheduledTask(task.id)">启用</button>
+                                        <button class="btn-danger" @click="deleteScheduledTask(task.id)">删除</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 新增/编辑定时任务模态框 -->
+                    <div class="modal-overlay" v-bind:class="{ active: scheduledTaskModal.show }" @click="closeScheduledTaskModal"></div>
+                    <div class="modal modal-center scheduled-task-modal" v-bind:class="{ active: scheduledTaskModal.show }">
+                        <div class="modal-content">
+                            <h3>{{ scheduledTaskModal.mode === 'edit' ? '编辑定时任务' : '新增定时任务' }}</h3>
+                            <form @submit.prevent="saveScheduledTask">
+                                <div class="form-group">
+                                    <label>任务名称:</label>
+                                    <input type="text" v-model="scheduledTaskModal.formData.name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>关联功能:</label>
+                                    <select v-model="scheduledTaskModal.formData.feature_id" required>
+                                        <option value="">请选择功能</option>
+                                        <option v-for="feature in features" :key="feature.id" :value="feature.id">
+                                            {{ feature.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Cron表达式:</label>
+                                    <input type="text" v-model="scheduledTaskModal.formData.cron_expression" required placeholder="例如: 0 0 * * *">
+                                    <div class="form-help">Cron表达式格式: 分 时 日 月 周</div>
+                                </div>
+                                <div class="form-group">
+                                    <label>任务描述:</label>
+                                    <textarea v-model="scheduledTaskModal.formData.description"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>状态:</label>
+                                    <select v-model="scheduledTaskModal.formData.is_active">
+                                        <option :value="true">启用</option>
+                                        <option :value="false">禁用</option>
+                                    </select>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-primary">保存</button>
+                                    <button type="button" class="btn-secondary" @click="closeScheduledTaskModal">取消</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -121,6 +214,15 @@
                             <input type="text" v-model="queryConditions.keyword" placeholder="请求ID或状态">
                         </div>
                         
+                        <div class="form-group">
+                            <label>执行类型:</label>
+                            <select v-model="queryConditions.execution_type">
+                                <option value="">所有类型</option>
+                                <option value="manual">手动执行</option>
+                                <option value="scheduled">定时任务</option>
+                            </select>
+                        </div>
+                        
                         <div class="form-group form-actions">
                             <button class="btn-primary" @click="loadLogs" :disabled="logsLoading">
                                 {{ logsLoading ? '查询中...' : '查询' }}
@@ -141,6 +243,7 @@
                                 <th>开始时间</th>
                                 <th>结束时间</th>
                                 <th>状态</th>
+                                <th>执行类型</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
@@ -155,6 +258,11 @@
                                     <span :class="['status-badge', 'status-' + log.status.toLowerCase()]">
                                         {{ log.status }}
                                     </span>
+                                </td>
+                                <td>
+                                    <span v-if="log.execution_type === 'manual'">手动执行</span>
+                                    <span v-else-if="log.execution_type === 'scheduled'">定时任务</span>
+                                    <span v-else>{{ log.execution_type }}</span>
                                 </td>
                                 <td>
                                     <button class="btn-view" @click="loadLogDetailList(log.id)">查看日志</button>

@@ -15,13 +15,15 @@ def query_logs():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     keyword = request.args.get('keyword')
+    execution_type = request.args.get('execution_type')
     
     # 调用服务查询日志
     status, msg, data = log_service.query_logs(
         feature_id=feature_id,
         start_date=start_date,
         end_date=end_date,
-        keyword=keyword
+        keyword=keyword,
+        execution_type=execution_type
     )
     
     if not status:

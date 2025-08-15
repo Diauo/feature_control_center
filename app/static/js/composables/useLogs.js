@@ -12,7 +12,8 @@ export function useLogs(addNotification) {
         feature_id: null,
         start_date: null,
         end_date: null,
-        keyword: null
+        keyword: null,
+        execution_type: null
     });
     
     // 加载日志列表
@@ -61,7 +62,8 @@ export function useLogs(addNotification) {
             feature_id: null,
             start_date: null,
             end_date: null,
-            keyword: null
+            keyword: null,
+            execution_type: null
         };
     };
     

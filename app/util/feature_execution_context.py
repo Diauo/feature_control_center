@@ -11,13 +11,14 @@ LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
 
 class FeatureExecutionContext:
-    def __init__(self, client_id, feature_name=None, feature_id=None, namespace="/feature"):
+    def __init__(self, client_id, feature_name=None, feature_id=None, namespace="/feature", execution_type="manual"):
         self.client_id = client_id
         self.namespace = namespace
         self.feature_name = feature_name or "未知功能"
         self.feature_id = feature_id
+        self.execution_type = execution_type
         # 生成唯一的requestId
-        days_since_epoch = int(time.time()) // 86400 
+        days_since_epoch = int(time.time()) // 86400
         max_id = db.session.query(db.func.max(FeatureExecutionLog.id)).scalar() or 0
         next_id = max_id + 1
         self.request_id = f"{days_since_epoch:05d}{next_id}"
@@ -28,7 +29,8 @@ class FeatureExecutionContext:
             request_id=self.request_id,
             start_time=datetime.now(),
             status="运行中",
-            client_id=self.client_id
+            client_id=self.client_id,
+            execution_type=self.execution_type
         )
         db.session.add(self.db_log)
         db.session.commit()

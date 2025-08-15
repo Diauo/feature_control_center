@@ -46,6 +46,8 @@ def create_app(config_class='app.config.Config'):
     app.register_blueprint(config_bp, url_prefix='/api/config')
     from app.controllers.log_controller import log_bp
     app.register_blueprint(log_bp, url_prefix='/api/log')
+    from app.controllers.scheduled_task_controller import scheduled_task_bp
+    app.register_blueprint(scheduled_task_bp, url_prefix='/api/scheduled-task')
 
     # 注册中间件
     log_request(app)
@@ -71,6 +73,15 @@ def create_app(config_class='app.config.Config'):
             create_default_customer()
         except Exception as e:
             print(f"创建默认客户时出错: {str(e)}")
+        
+        # 初始化和启动定时任务调度器
+        try:
+            from app.scheduler import task_scheduler
+            task_scheduler.start()
+            task_scheduler.load_scheduled_tasks()
+            print("定时任务调度器已启动")
+        except Exception as e:
+            print(f"启动定时任务调度器时出错: {str(e)}")
         
     return app
 
