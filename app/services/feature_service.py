@@ -167,10 +167,20 @@ def execute_feature(feature_id, client_id, execution_type="manual"):
     def run_feature_script():
         with app.app_context():
             ctx = FeatureExecutionContext(client_id, feature.get("name"), feature_id, execution_type=execution_type)
+            # 使用脚本路径生成唯一的模块名
+            module_name = f"feature_module_{hash(script_path) & 0x7FFFFFFF}"
+            module = None
             try:
-                spec = importlib.util.spec_from_file_location("feature_module", script_path)
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
+                import sys
+                # 检查模块是否已经加载过
+                if module_name in sys.modules:
+                    module = sys.modules[module_name]
+                else:
+                    spec = importlib.util.spec_from_file_location(module_name, script_path)
+                    module = importlib.util.module_from_spec(spec)
+                    # 将模块添加到sys.modules中，以支持相对导入
+                    sys.modules[module_name] = module
+                    spec.loader.exec_module(module)
                 if not hasattr(module, "run"):
                     ctx.log(f"{feature.get('name', '未知功能')} 功能脚本缺少 run() 方法，不符合规范", "error", False)
                     ctx.error(f"{feature.get('name', '未知功能')} 功能脚本缺少 run() 方法，不符合规范")
