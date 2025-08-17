@@ -1,4 +1,4 @@
-import ME3
+from . import ME3
 import requests
 import json
 from datetime import datetime
