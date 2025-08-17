@@ -237,8 +237,8 @@ export function useFeatures(currentCustomer, currentUser, addNotification, api) 
             return;
         }
         
-        if (!registerFeatureModal.value.name) {
-            addNotification('请输入功能名称');
+        if (!registerFeatureModal.value.customer_id) {
+            addNotification('请输入所属客户！');
             return;
         }
         

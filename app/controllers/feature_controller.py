@@ -63,9 +63,8 @@ def register_feature():
     description = request.form.get('description')
     customer_id = request.form.get('customer_id')
     category_id = request.form.get('category_id', 0)
-    
-    if not name:
-        return Result.bad_request("缺少功能名称参数")
+    if not customer_id:
+        return Result.bad_request("缺少客户ID参数")
     
     # 调用服务注册功能
     status, msg = feature_service.register_feature(file, name, description, customer_id, category_id)
