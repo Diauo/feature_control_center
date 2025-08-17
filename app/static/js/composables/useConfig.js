@@ -14,6 +14,14 @@ export function useConfig(currentUser, addNotification, api) {
             feature_id: 0
         }
     });
+    
+    // 筛选条件
+    const filterConditions = ref({
+        feature_id: '',
+        feature_name: '',
+        config_name: '',
+        config_description: ''
+    });
 
     // 加载所有配置
     const loadConfigs = async () => {
@@ -29,6 +37,46 @@ export function useConfig(currentUser, addNotification, api) {
             console.error('加载配置时发生错误:', error);
             addNotification('加载配置时发生错误: ' + error.message);
         }
+    };
+    
+    // 根据筛选条件加载配置
+    const loadFilteredConfigs = async () => {
+        try {
+            const params = {};
+            if (filterConditions.value.feature_id !== '') {
+                params.feature_id = filterConditions.value.feature_id;
+            }
+            if (filterConditions.value.feature_name) {
+                params.feature_name = filterConditions.value.feature_name;
+            }
+            if (filterConditions.value.config_name) {
+                params.config_name = filterConditions.value.config_name;
+            }
+            if (filterConditions.value.config_description) {
+                params.config_description = filterConditions.value.config_description;
+            }
+            
+            const response = await api.config.get_filtered_config(params);
+            if (response.data.status) {
+                configs.value = response.data.data;
+            } else {
+                console.error('加载筛选配置失败:', response.data.data);
+                addNotification(response.data.message || '加载筛选配置失败: ' + response.data.data);
+            }
+        } catch (error) {
+            console.error('加载筛选配置时发生错误:', error);
+            addNotification('加载筛选配置时发生错误: ' + error.message);
+        }
+    };
+    
+    // 重置筛选条件
+    const resetFilterConditions = () => {
+        filterConditions.value = {
+            feature_id: '',
+            feature_name: '',
+            config_name: '',
+            config_description: ''
+        };
     };
 
     // 打开添加配置模态框
@@ -189,7 +237,10 @@ export function useConfig(currentUser, addNotification, api) {
     return {
         configs,
         configModal,
+        filterConditions,
         loadConfigs,
+        loadFilteredConfigs,
+        resetFilterConditions,
         openAddConfigModal,
         openEditConfigModal,
         closeConfigModal,

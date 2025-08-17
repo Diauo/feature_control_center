@@ -33,6 +33,32 @@ def get_all_config():
         logging.error(f"获取配置列表异常: {str(e)}")
         return Result.error(f"获取配置列表失败: {str(e)}", 500)
 
+@config_bp.route('/get_filtered_config', methods=['GET'])
+@require_role('admin')
+def get_filtered_config():
+    """获取筛选后的配置"""
+    try:
+        # 获取筛选参数
+        feature_id = request.args.get('feature_id', type=int)
+        feature_name = request.args.get('feature_name', type=str)
+        config_name = request.args.get('config_name', type=str)
+        config_description = request.args.get('config_description', type=str)
+        
+        status, msg, data = config_service.get_filtered_config(
+            feature_id=feature_id,
+            feature_name=feature_name,
+            config_name=config_name,
+            config_description=config_description
+        )
+        if not status:
+            logging.error(f"获取筛选配置列表失败: {msg}")
+            return Result.error(msg, 500)
+        else:
+            return Result.success(data)
+    except Exception as e:
+        logging.error(f"获取筛选配置列表异常: {str(e)}")
+        return Result.error(f"获取筛选配置列表失败: {str(e)}", 500)
+
 @config_bp.route('/add_config', methods=['POST'])
 @require_role('admin')
 def add_config():
