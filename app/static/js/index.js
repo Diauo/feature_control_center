@@ -99,7 +99,10 @@ createApp({
         const {
             configs,
             configModal,
+            filterConditions,
             loadConfigs,
+            loadFilteredConfigs,
+            resetFilterConditions,
             openAddConfigModal,
             openEditConfigModal,
             closeConfigModal,
@@ -192,6 +195,8 @@ createApp({
         const switchToConfig = async () => {
             currentPage.value = 'config';
             await loadConfigs();
+            // 加载所有功能列表用于筛选
+            await loadFeaturesByCustomer();
         };
         
         const switchToLogs = async () => {
@@ -241,6 +246,9 @@ createApp({
             
             // 加载定时任务
             await loadScheduledTasks();
+            
+            // 加载功能列表用于配置筛选
+            await loadFeaturesByCustomer();
         });
 
         // 格式化时间显示
@@ -327,6 +335,10 @@ createApp({
             // 配置相关
             configs,
             configModal,
+            filterConditions,
+            loadConfigs,
+            loadFilteredConfigs,
+            resetFilterConditions,
             openAddConfigModal,
             openEditConfigModal,
             closeConfigModal,

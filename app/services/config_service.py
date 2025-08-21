@@ -17,6 +17,44 @@ def get_all_config():
         logging.error(f"获取配置列表失败: {str(e)}")
         return False, f"获取配置列表失败: {str(e)}", []
 
+def get_filtered_config(feature_id=None, feature_name=None, config_name=None, config_description=None):
+    try:
+        # 构建SQL查询
+        sql = '''
+            SELECT c.*, f.name as feature_name
+            FROM base_config c
+            LEFT JOIN base_feature f ON c.feature_id = f.id
+            WHERE 1=1
+        '''
+        params = {}
+        
+        # 添加筛选条件
+        if feature_id is not None:
+            if feature_id == 0:  # 系统配置
+                sql += ' AND c.feature_id = 0'
+            else:  # 特定功能配置
+                sql += ' AND c.feature_id = :feature_id'
+                params['feature_id'] = feature_id
+                
+        if feature_name:
+            sql += ' AND f.name LIKE :feature_name'
+            params['feature_name'] = f'%{feature_name}%'
+            
+        if config_name:
+            sql += ' AND c.name LIKE :config_name'
+            params['config_name'] = f'%{config_name}%'
+            
+        if config_description:
+            sql += ' AND c.description LIKE :config_description'
+            params['config_description'] = f'%{config_description}%'
+        
+        # 执行查询
+        result = db.session.execute(text(sql), params).fetchall()
+        return True, "成功", model_to_dict(result, Config)
+    except Exception as e:
+        logging.error(f"获取筛选配置列表失败: {str(e)}")
+        return False, f"获取筛选配置列表失败: {str(e)}", []
+
 def get_config_by_id(config_id):
     if config_id is None:
         return False, "config_id为空", []

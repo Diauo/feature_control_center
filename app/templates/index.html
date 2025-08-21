@@ -301,6 +301,42 @@
             <!-- 系统配置页面 -->
             <div v-if="currentPage === 'config'">
                 <div id="config-management">
+                    <!-- 筛选表单 -->
+                    <div class="config-filter-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>关联功能:</label>
+                                <select v-model="filterConditions.feature_id">
+                                    <option value="">所有配置</option>
+                                    <option value="0">系统配置</option>
+                                    <option v-for="feature in features" :key="feature.id" :value="feature.id">
+                                        {{ feature.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>功能名称:</label>
+                                <input type="text" v-model="filterConditions.feature_name" placeholder="模糊匹配功能名称">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>配置名称:</label>
+                                <input type="text" v-model="filterConditions.config_name" placeholder="模糊匹配配置名称">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>配置描述:</label>
+                                <input type="text" v-model="filterConditions.config_description" placeholder="模糊匹配配置描述">
+                            </div>
+                            
+                            <div class="form-group form-actions">
+                                <button class="btn-primary" @click="loadFilteredConfigs">筛选</button>
+                                <button class="btn-secondary" @click="resetFilterConditions">重置</button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- 操作按钮区域 -->
                     <div class="config-actions" v-if="currentUser && currentUser.role === 'admin'">
                         <button class="btn-primary" @click="openAddConfigModal">新增配置</button>
@@ -448,11 +484,11 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>功能名称:</label>
-                        <input type="text" v-model="registerFeatureModal.name" required>
+                        <label>功能名称（为空使用脚本内置信息）:</label>
+                        <input type="text" v-model="registerFeatureModal.name">
                     </div>
                     <div class="form-group">
-                        <label>功能描述:</label>
+                        <label>功能描述（为空使用脚本内置信息）:</label>
                         <textarea v-model="registerFeatureModal.description"></textarea>
                     </div>
                     <div class="form-group">

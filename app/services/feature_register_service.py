@@ -12,24 +12,47 @@ UPLOADED_FEATURE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "
 SCAN_INTERVAL = 60  # 每60秒全量扫描一次
 
 def load_feature_meta(script_path):
+    import sys
+    module_name = None
     try:
         if os.path.isfile(script_path) and script_path.endswith('.py'):
             # 处理单个.py文件
-            spec = importlib.util.spec_from_file_location("feature_module", script_path)
+            # 使用文件路径生成唯一的模块名
+            module_name = f"feature_module_{hash(script_path) & 0x7FFFFFFF}"
+            spec = importlib.util.spec_from_file_location(module_name, script_path)
             module = importlib.util.module_from_spec(spec)
+            # 将模块添加到sys.modules中，以支持相对导入
+            sys.modules[module_name] = module
             spec.loader.exec_module(module)
-            return getattr(module, "__meta__", None)
+            meta = getattr(module, "__meta__", None)
+            # 获取完元数据后立即从sys.modules中移除
+            sys.modules.pop(module_name, None)
+            return meta
         elif os.path.isdir(script_path):
             # 处理模块目录
             init_file = os.path.join(script_path, "__init__.py")
             if os.path.exists(init_file):
-                spec = importlib.util.spec_from_file_location("feature_module", init_file)
+                # 使用目录路径生成唯一的模块名
+                module_name = f"feature_module_{hash(script_path) & 0x7FFFFFFF}"
+                spec = importlib.util.spec_from_file_location(module_name, init_file)
                 module = importlib.util.module_from_spec(spec)
+                # 将模块添加到sys.modules中，以支持相对导入
+                sys.modules[module_name] = module
                 spec.loader.exec_module(module)
-                return getattr(module, "__meta__", None)
+                meta = getattr(module, "__meta__", None)
+                # 获取完元数据后立即从sys.modules中移除所有相关模块
+                module_keys_to_remove = [key for key in sys.modules.keys() if key.startswith(module_name)]
+                for key in module_keys_to_remove:
+                    sys.modules.pop(key, None)
+                return meta
         return None
     except Exception as e:
         logger.warning(f"加载功能脚本失败: {script_path}, 错误: {e}")
+        # 从sys.modules中移除可能已添加的模块
+        if module_name:
+            module_keys_to_remove = [key for key in sys.modules.keys() if key.startswith(module_name)]
+            for key in module_keys_to_remove:
+                sys.modules.pop(key, None)
         return None
 
 def scan_and_register_features():

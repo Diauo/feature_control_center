@@ -6,6 +6,11 @@ const config_api = {
     return api.client.get('/config/get_all_config');
   },
   
+  // 获取筛选后的配置
+  get_filtered_config(params) {
+    return api.client.get('/config/get_filtered_config', { params });
+  },
+  
   // 新增配置
   add_config(config) {
     return api.client.post('/config/add_config', config);
