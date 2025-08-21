@@ -36,8 +36,26 @@ def add_scheduled_task():
         return Result.bad_request("缺少请求参数")
         
     # 验证必要参数
-    required_fields = ['feature_id', 'name', 'cron_expression']
-    for field in required_fields:
+    # 检查是否提供了cron_expression或者新的时间定义方式参数
+    has_cron_expression = 'cron_expression' in task_data and task_data['cron_expression']
+    has_schedule_type = 'schedule_type' in task_data and task_data['schedule_type']
+    
+    if not has_cron_expression and not has_schedule_type:
+        return Result.bad_request("缺少必要参数: cron_expression 或 schedule_type")
+    
+    # 如果提供了schedule_type，还需要验证相关的参数
+    if has_schedule_type:
+        schedule_type = task_data['schedule_type']
+        if schedule_type == 'interval':
+            if 'interval_value' not in task_data or 'interval_unit' not in task_data:
+                return Result.bad_request("缺少必要参数: interval_value 或 interval_unit")
+        elif schedule_type == 'daily':
+            if 'daily_time' not in task_data:
+                return Result.bad_request("缺少必要参数: daily_time")
+    
+    # 验证其他必要参数
+    other_required_fields = ['feature_id', 'name']
+    for field in other_required_fields:
         if field not in task_data or not task_data[field]:
             return Result.bad_request(f"缺少必要参数: {field}")
     
@@ -56,6 +74,16 @@ def update_scheduled_task(task_id):
     if not task_data:
         return Result.bad_request("缺少请求参数")
         
+    # 如果提供了schedule_type，还需要验证相关的参数
+    if 'schedule_type' in task_data and task_data['schedule_type']:
+        schedule_type = task_data['schedule_type']
+        if schedule_type == 'interval':
+            if 'interval_value' not in task_data or 'interval_unit' not in task_data:
+                return Result.bad_request("缺少必要参数: interval_value 或 interval_unit")
+        elif schedule_type == 'daily':
+            if 'daily_time' not in task_data:
+                return Result.bad_request("缺少必要参数: daily_time")
+    
     status, msg, data = scheduled_task_service.update_scheduled_task(task_id, task_data)
     if not status:
         return Result.error(msg, 500)

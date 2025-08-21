@@ -6,7 +6,7 @@ from app import db
 from app.models.base_models import FeatureExecutionLog
 from app.models.base_models import FeatureExecutionLog, FeatureExecutionLogDetail
 import os
-import time
+import time, random
 LOG_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs"))
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -20,10 +20,9 @@ class FeatureExecutionContext:
         # 判断是否为定时任务执行
         self.is_scheduled_task = execution_type == "scheduled"
         # 生成唯一的requestId
-        days_since_epoch = int(time.time()) // 86400
-        max_id = db.session.query(db.func.max(FeatureExecutionLog.id)).scalar() or 0
-        next_id = max_id + 1
-        self.request_id = f"{days_since_epoch:05d}{next_id}"
+        ts = int(time.time()) % 100000   # 后 5 位秒级时间戳
+        rand_part = random.randint(0, 99999)  # 5 位随机数
+        self.request_id = f"{ts:05d}{rand_part:05d}"
 
         # 初始化数据库日志记录
         self.db_log = FeatureExecutionLog(

@@ -125,6 +125,9 @@ createApp({
             resetQueryConditions
         } = useLogs(addNotification);
         
+        // 定时任务筛选
+        const scheduledTaskFilter = ref('');
+        
         const {
             scheduledTasks,
             scheduledTasksLoading,
@@ -136,8 +139,9 @@ createApp({
             saveScheduledTask,
             deleteScheduledTask,
             enableScheduledTask,
-            disableScheduledTask
-        } = useScheduledTasks(addNotification, features);
+            disableScheduledTask,
+            filteredScheduledTasks
+        } = useScheduledTasks(addNotification, features, scheduledTaskFilter);
         
         // 日志明细筛选相关
         const logDetailFilter = ref('');
@@ -383,7 +387,10 @@ createApp({
             enableScheduledTask,
             disableScheduledTask,
             formatDateTime,
-            formatDate
+            formatDate,
+            // 定时任务筛选
+            scheduledTaskFilter,
+            filteredScheduledTasks
         }
     }
 }).component('sidebar-menu', SidebarMenu).mount('#app');

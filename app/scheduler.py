@@ -4,7 +4,7 @@ from app.services.scheduled_task_service import get_active_scheduled_tasks
 from app.services.feature_service import execute_feature
 import atexit
 from app.util.log_utils import logger
-
+from datetime import datetime
 class TaskScheduler:
     def __init__(self):
         self.scheduler = BackgroundScheduler()
@@ -56,6 +56,19 @@ class TaskScheduler:
         try:
             # 创建cron触发器
             trigger = CronTrigger.from_crontab(task['cron_expression'])
+            
+            # 计算下次执行时间
+            next_run_time = trigger.get_next_fire_time(None, datetime.now())
+            if next_run_time:
+                # 更新任务的下次执行时间
+                from app.models.base_models import ScheduledTask
+                from app import db
+                scheduled_task = ScheduledTask.query.get(task['id'])
+                if scheduled_task:
+                    scheduled_task.next_run_time = next_run_time
+                    db.session.commit()
+                    # 更新task字典中的next_run_time
+                    task['next_run_time'] = next_run_time
             
             # 添加任务到调度器
             job = self.scheduler.add_job(
@@ -111,21 +124,49 @@ class TaskScheduler:
         # 如果任务是启用的，再添加新任务
         if task.get('is_active', False):
             self.add_job(task)
+        else:
+            # 如果任务被禁用，更新其下次执行时间为None
+            from app.models.base_models import ScheduledTask
+            from app import db
+            scheduled_task = ScheduledTask.query.get(task['id'])
+            if scheduled_task:
+                scheduled_task.next_run_time = None
+                db.session.commit()
         
     def execute_scheduled_task(self, task_id, feature_id):
         """执行定时任务"""
+        # 确保在Flask应用上下文中执行
+        if self.app:
+            with self.app.app_context():
+                self._execute_scheduled_task_internal(task_id, feature_id)
+        else:
+            logger.error(f"执行定时任务失败，未设置Flask应用上下文: {task_id}")
+            
+    def _execute_scheduled_task_internal(self, task_id, feature_id):
+        """内部方法：执行定时任务"""
         try:
             logger.info(f"开始执行定时任务 ID: {task_id}, 功能 ID: {feature_id}")
+            
+            # 更新任务的上次执行时间和下次执行时间
+            from app.models.base_models import ScheduledTask
+            from app import db
+            scheduled_task = ScheduledTask.query.get(task_id)
+            if scheduled_task:
+                # 更新上次执行时间
+                last_run_time = datetime.now()
+                scheduled_task.last_run_time = last_run_time
+                
+                # 重新计算下次执行时间
+                trigger = CronTrigger.from_crontab(scheduled_task.cron_expression)
+                next_run_time = trigger.get_next_fire_time(last_run_time, last_run_time)
+                scheduled_task.next_run_time = next_run_time
+                
+                db.session.commit()
+            
             # 使用特殊客户端ID标识定时任务执行
             client_id = f"scheduled_task_{task_id}"
             # 执行功能
-            # 确保在Flask应用上下文中执行
-            if self.app:
-                with self.app.app_context():
-                    status, msg, _ = execute_feature(feature_id, client_id, execution_type="scheduled")
-            else:
-                logger.error(f"执行定时任务失败，未设置Flask应用上下文: {task_id}")
-                return
+            status, msg, _ = execute_feature(feature_id, client_id, execution_type="scheduled")
                     
             if status:
                 logger.info(f"定时任务执行成功: {msg}")

@@ -1,7 +1,7 @@
 const { ref, computed } = Vue
 import api from '../api/api.js';
 
-export function useScheduledTasks(addNotification, features) {
+export function useScheduledTasks(addNotification, features, filter) {
     // 定时任务相关状态
     const scheduledTasks = ref([]);
     const scheduledTasksLoading = ref(false);
@@ -13,6 +13,10 @@ export function useScheduledTasks(addNotification, features) {
             name: '',
             feature_id: null,
             cron_expression: '',
+            scheduleType: 'interval', // 'interval', 'daily', 'cron'
+            intervalValue: 1,
+            intervalUnit: 'minutes', // 'minutes', 'hours', 'days'
+            dailyTime: '00:00', // HH:MM格式
             description: '',
             is_active: true
         }
@@ -45,6 +49,10 @@ export function useScheduledTasks(addNotification, features) {
                 name: '',
                 feature_id: null,
                 cron_expression: '',
+                scheduleType: 'interval',
+                intervalValue: 1,
+                intervalUnit: 'minutes',
+                dailyTime: '00:00',
                 description: '',
                 is_active: true
             }
@@ -53,6 +61,36 @@ export function useScheduledTasks(addNotification, features) {
     
     // 打开编辑定时任务模态框
     const openEditScheduledTaskModal = (task) => {
+        // 根据cron表达式推断scheduleType
+        let scheduleType = 'cron';
+        let intervalValue = 1;
+        let intervalUnit = 'minutes';
+        let dailyTime = '00:00';
+        
+        // 简单的cron表达式解析，用于推断scheduleType
+        // 这里只是一个基础实现，实际应用中可能需要更复杂的解析
+        const cronParts = task.cron_expression.split(' ');
+        if (cronParts.length === 5) {
+            const [minute, hour, day, month, weekday] = cronParts;
+            // 检查是否为每天指定时间的表达式 (例如: 0 9 * * *)
+            if (minute !== '*' && hour !== '*' && day === '*' && month === '*' && weekday === '*') {
+                scheduleType = 'daily';
+                dailyTime = `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+            }
+            // 检查是否为间隔执行的表达式 (例如: */5 * * * *)
+            else if (minute.startsWith('*/') && hour === '*' && day === '*' && month === '*' && weekday === '*') {
+                scheduleType = 'interval';
+                intervalValue = parseInt(minute.substring(2));
+                intervalUnit = 'minutes';
+            }
+            else if (minute === '0' && hour.startsWith('*/') && day === '*' && month === '*' && weekday === '*') {
+                scheduleType = 'interval';
+                intervalValue = parseInt(hour.substring(2));
+                intervalUnit = 'hours';
+            }
+            // 更多的解析规则可以在这里添加
+        }
+        
         scheduledTaskModal.value = {
             show: true,
             mode: 'edit',
@@ -61,6 +99,10 @@ export function useScheduledTasks(addNotification, features) {
                 name: task.name,
                 feature_id: task.feature_id,
                 cron_expression: task.cron_expression,
+                scheduleType: scheduleType,
+                intervalValue: intervalValue,
+                intervalUnit: intervalUnit,
+                dailyTime: dailyTime,
                 description: task.description,
                 is_active: task.is_active
             }
@@ -75,13 +117,52 @@ export function useScheduledTasks(addNotification, features) {
     // 保存定时任务
     const saveScheduledTask = async () => {
         try {
+            // 根据scheduleType生成cron表达式
+            let cronExpression = '';
+            const formData = {...scheduledTaskModal.value.formData};
+            
+            switch (formData.scheduleType) {
+                case 'interval':
+                    // 根据间隔时间生成cron表达式
+                    switch (formData.intervalUnit) {
+                        case 'minutes':
+                            cronExpression = `*/${formData.intervalValue} * * * *`;
+                            break;
+                        case 'hours':
+                            cronExpression = `0 */${formData.intervalValue} * * *`;
+                            break;
+                        case 'days':
+                            cronExpression = `0 0 */${formData.intervalValue} * *`;
+                            break;
+                    }
+                    break;
+                case 'daily':
+                    // 根据每天指定时间生成cron表达式
+                    const [hours, minutes] = formData.dailyTime.split(':');
+                    cronExpression = `${minutes} ${hours} * * *`;
+                    break;
+                case 'cron':
+                    // 直接使用cron表达式
+                    cronExpression = formData.cron_expression;
+                    break;
+            }
+            
+            // 设置cron表达式
+            formData.cron_expression = cronExpression;
+            
+            // 移除前端特有的字段
+            delete formData.scheduleType;
+            delete formData.intervalValue;
+            delete formData.intervalUnit;
+            delete formData.dailyTime;
+            
             let response;
             if (scheduledTaskModal.value.mode === 'edit') {
                 // 编辑定时任务
-                response = await api.scheduledTask.updateScheduledTask(scheduledTaskModal.value.formData.id, scheduledTaskModal.value.formData);
+                response = await api.scheduledTask.updateScheduledTask(scheduledTaskModal.value.formData.id, formData);
             } else {
                 // 新增定时任务
-                response = await api.scheduledTask.addScheduledTask(scheduledTaskModal.value.formData);
+                response = await api.scheduledTask.addScheduledTask(formData);
             }
             
             if (response.data.status) {
@@ -169,6 +250,15 @@ export function useScheduledTasks(addNotification, features) {
             day: '2-digit'
         });
     };
+// 筛选后的定时任务列表
+    const filteredScheduledTasks = computed(() => {
+        if (!filter || !filter.value) {
+            return scheduledTasks.value;
+        }
+        return scheduledTasks.value.filter(task => 
+            task.name.toLowerCase().includes(filter.value.toLowerCase())
+        );
+    });
 
     return {
         // 状态
@@ -191,6 +281,9 @@ export function useScheduledTasks(addNotification, features) {
         formatDate,
         
         // 数据
-        features
+        features,
+        
+        // 筛选后的定时任务列表
+        filteredScheduledTasks
     };
 }

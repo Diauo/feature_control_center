@@ -85,8 +85,11 @@
             <!-- 定时任务页面 -->
             <div v-if="currentPage === 'cron'">
                 <div class="scheduled-tasks-container">
-                    <!-- 操作按钮 -->
+                    <!-- 筛选和操作按钮 -->
                     <div class="scheduled-tasks-actions">
+                        <div class="scheduled-tasks-filter">
+                            <input type="text" v-model="scheduledTaskFilter" placeholder="按任务名称筛选" @input="filterScheduledTasks">
+                        </div>
                         <button class="btn-primary" @click="openAddScheduledTaskModal">新增定时任务</button>
                         <button class="btn-secondary" @click="loadScheduledTasks" :disabled="scheduledTasksLoading">
                             {{ scheduledTasksLoading ? '刷新中...' : '刷新' }}
@@ -110,7 +113,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="task in scheduledTasks" :key="task.id">
+                                <tr v-for="task in filteredScheduledTasks" :key="task.id">
                                     <td>{{ task.id }}</td>
                                     <td>{{ task.name }}</td>
                                     <td>{{ task.feature_name }}</td>
@@ -157,9 +160,38 @@
                                         </option>
                                     </select>
                                 </div>
-                                <div class="form-group">
+<div class="form-group">
+                                    <label>执行方式:</label>
+                                    <select v-model="scheduledTaskModal.formData.scheduleType">
+                                        <option value="interval">按间隔执行</option>
+                                        <option value="daily">每天指定时间</option>
+                                        <option value="cron">Cron表达式（高级）</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- 按间隔执行 -->
+                                <div v-if="scheduledTaskModal.formData.scheduleType === 'interval'" class="form-group">
+                                    <label>间隔时间:</label>
+                                    <div class="interval-inputs">
+                                        <input type="number" v-model="scheduledTaskModal.formData.intervalValue" min="1" required>
+                                        <select v-model="scheduledTaskModal.formData.intervalUnit">
+                                            <option value="minutes">分钟</option>
+                                            <option value="hours">小时</option>
+                                            <option value="days">天</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- 每天指定时间执行 -->
+                                <div v-if="scheduledTaskModal.formData.scheduleType === 'daily'" class="form-group">
+                                    <label>执行时间:</label>
+                                    <input type="time" v-model="scheduledTaskModal.formData.dailyTime" required>
+                                </div>
+                                
+                                <!-- Cron表达式 -->
+                                <div v-if="scheduledTaskModal.formData.scheduleType === 'cron'" class="form-group">
                                     <label>Cron表达式:</label>
-                                    <input type="text" v-model="scheduledTaskModal.formData.cron_expression" required placeholder="例如: 0 0 * * *">
+                                    <input type="text" v-model="scheduledTaskModal.formData.cron_expression" placeholder="例如: 0 0 * * *">
                                     <div class="form-help">Cron表达式格式: 分 时 日 月 周</div>
                                 </div>
                                 <div class="form-group">
