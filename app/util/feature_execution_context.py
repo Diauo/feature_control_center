@@ -17,6 +17,8 @@ class FeatureExecutionContext:
         self.feature_name = feature_name or "未知功能"
         self.feature_id = feature_id
         self.execution_type = execution_type
+        # 判断是否为定时任务执行
+        self.is_scheduled_task = execution_type == "scheduled"
         # 生成唯一的requestId
         days_since_epoch = int(time.time()) // 86400
         max_id = db.session.query(db.func.max(FeatureExecutionLog.id)).scalar() or 0
@@ -83,12 +85,14 @@ class FeatureExecutionContext:
         self.db_log.status = "成功"
         db.session.commit()
         
-        emit('feature_done', {
-            'client_id': self.client_id,
-            'status': 'success',
-            'msg': msg,
-            'data': data or {}
-        }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
+        # 如果是定时任务执行，不发送WebSocket消息
+        if not self.is_scheduled_task:
+            emit('feature_done', {
+                'client_id': self.client_id,
+                'status': 'success',
+                'msg': msg,
+                'data': data or {}
+            }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
 
     def fail(self, msg="功能执行失败", data=None):
         # 更新数据库日志记录
@@ -96,12 +100,14 @@ class FeatureExecutionContext:
         self.db_log.status = "失败"
         db.session.commit()
         
-        emit('feature_done', {
-            'client_id': self.client_id,
-            'status': 'error',
-            'msg': msg,
-            'data': data or {}
-        }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
+        # 如果是定时任务执行，不发送WebSocket消息
+        if not self.is_scheduled_task:
+            emit('feature_done', {
+                'client_id': self.client_id,
+                'status': 'error',
+                'msg': msg,
+                'data': data or {}
+            }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
 
     def error(self, msg="功能执行失败", data=None, exception=None):
         # 记录错误日志
@@ -113,12 +119,14 @@ class FeatureExecutionContext:
         else:
             self.log(f"错误信息: {msg}", "error")
             
-        emit('feature_error', {
-            'client_id': self.client_id,
-            'status': 'error',
-            'msg': msg,
-            'data': data or {}
-        }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
+        # 如果是定时任务执行，不发送WebSocket消息
+        if not self.is_scheduled_task:
+            emit('feature_error', {
+                'client_id': self.client_id,
+                'status': 'error',
+                'msg': msg,
+                'data': data or {}
+            }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
 
     def terminate(self, reason="任务被终止"):
         # 更新数据库日志记录
@@ -126,11 +134,13 @@ class FeatureExecutionContext:
         self.db_log.status = "终止"
         db.session.commit()
         
-        emit('feature_done', {
-            'client_id': self.client_id,
-            'status': 'terminated',
-            'msg': reason
-        }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
+        # 如果是定时任务执行，不发送WebSocket消息
+        if not self.is_scheduled_task:
+            emit('feature_done', {
+                'client_id': self.client_id,
+                'status': 'terminated',
+                'msg': reason
+            }, room=client_sid_map.get(self.client_id), namespace=self.namespace)
 
 
 class WebSocketLogHandler(logging.Handler):

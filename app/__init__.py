@@ -77,6 +77,7 @@ def create_app(config_class='app.config.Config'):
         # 初始化和启动定时任务调度器
         try:
             from app.scheduler import task_scheduler
+            task_scheduler.init_app(app)  # 初始化调度器的应用实例
             task_scheduler.start()
             task_scheduler.load_scheduled_tasks()
             print("定时任务调度器已启动")

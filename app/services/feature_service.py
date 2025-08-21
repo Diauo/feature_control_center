@@ -203,8 +203,8 @@ def execute_feature(feature_id, client_id, execution_type="manual"):
 
     t = threading.Thread(target=run_feature_script)
     t.start()
-
-    return True, "功能已启动，日志和结果将通过WebSocket实时推送", None
+    msg = "功能已启动，日志和结果将通过WebSocket实时推送" if execution_type=="manual" else "定时任务已启动，执行结果将展示在日志中"
+    return True, msg, None
 
 def register_feature(file, name, description, customer_id, category_id):
     """
@@ -217,7 +217,6 @@ def register_feature(file, name, description, customer_id, category_id):
     :return: (bool, str) 是否成功，提示信息
     """
     try:
-        from flask import current_app
         import os
         from app.util.log_utils import logger
         
