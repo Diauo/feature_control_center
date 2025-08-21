@@ -30,7 +30,13 @@ class Base_model(db.Model):
         """
         data = {}
         for column in self.__table__.columns:
-            data[column.name] = getattr(self, column.name)
+            value = getattr(self, column.name)
+            # 如果是datetime类型，格式化为字符串
+            if isinstance(value, datetime):
+                # 确保时间格式统一为 yyyy-MM-dd HH:mm:ss
+                data[column.name] = value.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                data[column.name] = value
         return data
 
 

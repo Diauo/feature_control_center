@@ -108,7 +108,7 @@ def get_log_details(log_id):
             result.append({
                 'id': detail.id,
                 'log_id': detail.log_id,
-                'timestamp': detail.timestamp.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] if detail.timestamp else None,
+                'timestamp': detail.timestamp.strftime('%Y-%m-%d %H:%M:%S') if detail.timestamp else None,
                 'level': detail.level,
                 'message': detail.message,
                 'request_id': detail.request_id
