@@ -2,11 +2,13 @@ from flask import Blueprint, jsonify, request, render_template
 from app.services import category_service
 from app.models.base_models import Category
 from app.util.result import Result
+from app.middlewares import require_role, require_customer_access
 
 category_bp = Blueprint('category', __name__)
 
 
 @category_bp.route('/get_all_category', methods=['GET'])
+@require_role('operator')
 def get_all_category():
     status, msg, data = category_service.get_category_by_customer_id()
     if not status:
@@ -16,6 +18,8 @@ def get_all_category():
 
 
 @category_bp.route('/get_category_by_customer_id', methods=['GET'])
+@require_role('operator')
+@require_customer_access()
 def get_category_by_customer_id():
     customer_id = request.args.get('id')
     if customer_id is None:
@@ -29,6 +33,7 @@ def get_category_by_customer_id():
 
 
 @category_bp.route('/add_category', methods=['POST'])
+@require_role('admin')
 def add_category():
     request_body = request.get_json()
     if request_body is None:
@@ -45,6 +50,7 @@ def add_category():
 
 
 @category_bp.route('/del_category', methods=['POST'])
+@require_role('admin')
 def del_category():
     request_body = request.get_json()
     if not request_body:

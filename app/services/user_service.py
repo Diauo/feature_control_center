@@ -87,8 +87,8 @@ def register_user(username, password, email=None, role='operator', associated_cu
         db.session.add(user)
         db.session.commit()
         
-        # 如果是客户经理且有关联客户，创建关联记录
-        if role == 'manager' and associated_customers:
+        # 如果是操作员且有关联客户，创建关联记录
+        if role == 'operator' and associated_customers:
             for customer_id in associated_customers:
                 user_customer = UserCustomer(
                     user_id=user.id,

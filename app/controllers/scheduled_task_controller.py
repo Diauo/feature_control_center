@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify, request
 from app.services import scheduled_task_service
 from app.util.result import Result
+from app.middlewares import require_role
 
 scheduled_task_bp = Blueprint('scheduled_task', __name__)
 
 @scheduled_task_bp.route('/get_all', methods=['GET'])
+@require_role('operator')
 def get_all_scheduled_tasks():
     """
     获取所有定时任务
@@ -16,6 +18,7 @@ def get_all_scheduled_tasks():
         return Result.success(data)
 
 @scheduled_task_bp.route('/get/<int:task_id>', methods=['GET'])
+@require_role('operator')
 def get_scheduled_task(task_id):
     """
     根据ID获取定时任务
@@ -27,6 +30,7 @@ def get_scheduled_task(task_id):
         return Result.success(data)
 
 @scheduled_task_bp.route('/add', methods=['POST'])
+@require_role('admin')
 def add_scheduled_task():
     """
     添加新定时任务
@@ -66,6 +70,7 @@ def add_scheduled_task():
         return Result.success(data, "定时任务添加成功")
 
 @scheduled_task_bp.route('/update/<int:task_id>', methods=['PUT'])
+@require_role('admin')
 def update_scheduled_task(task_id):
     """
     更新指定ID的定时任务
@@ -91,6 +96,7 @@ def update_scheduled_task(task_id):
         return Result.success(data, "定时任务更新成功")
 
 @scheduled_task_bp.route('/delete/<int:task_id>', methods=['DELETE'])
+@require_role('admin')
 def delete_scheduled_task(task_id):
     """
     删除指定ID的定时任务
@@ -102,6 +108,7 @@ def delete_scheduled_task(task_id):
         return Result.success(None, "定时任务删除成功")
 
 @scheduled_task_bp.route('/enable/<int:task_id>', methods=['POST'])
+@require_role('admin')
 def enable_scheduled_task(task_id):
     """
     启用指定ID的定时任务
@@ -113,6 +120,7 @@ def enable_scheduled_task(task_id):
         return Result.success(data, "定时任务已启用")
 
 @scheduled_task_bp.route('/disable/<int:task_id>', methods=['POST'])
+@require_role('admin')
 def disable_scheduled_task(task_id):
     """
     禁用指定ID的定时任务

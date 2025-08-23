@@ -1,9 +1,11 @@
 from flask import Blueprint, jsonify, request, render_template
 from app.services import feature_service
 from app.util.result import Result
+from app.middlewares import require_role, require_customer_access
 feature_bp = Blueprint('feature', __name__)
 
 @feature_bp.route('/get_all_feature', methods=['GET'])
+@require_role('operator')
 def get_all_feature():
     status, msg, data = feature_service.get_all_feature()
     if not status:
@@ -12,6 +14,8 @@ def get_all_feature():
         return Result.success(data)
 
 @feature_bp.route('/get_feature_by_customer_id', methods=['GET'])
+@require_role('operator')
+@require_customer_access()
 def get_feature_by_customer_id():
     customer_id = request.args.get('customer_id')
     if customer_id is None:
@@ -23,6 +27,7 @@ def get_feature_by_customer_id():
         return Result.success(data)
 
 @feature_bp.route('/get_feature_by_category_id', methods=['GET'])
+@require_role('operator')
 def get_feature_by_category_id():
     category_id = request.args.get('id')
     customer_id = request.args.get('customer_id')
@@ -35,6 +40,7 @@ def get_feature_by_category_id():
         return Result.success(data)
     
 @feature_bp.route('/execute', methods=['POST'])
+@require_role('operator')
 def execute():
     feature_id = request.json.get('feature_id')
     if not feature_id:
@@ -49,6 +55,7 @@ def execute():
         return Result.success(None, "执行成功")
 
 @feature_bp.route('/register', methods=['POST'])
+@require_role('admin')
 def register_feature():
     from app.services import feature_service
     from app.util.result import Result
@@ -74,6 +81,7 @@ def register_feature():
         return Result.success(None, "功能注册成功")
 
 @feature_bp.route('/delete/<int:feature_id>', methods=['DELETE'])
+@require_role('admin')
 def delete_feature(feature_id):
     # 调用服务删除功能
     status, msg = feature_service.delete_feature(feature_id)

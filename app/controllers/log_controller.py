@@ -1,10 +1,12 @@
 from flask import Blueprint, jsonify, request
 from app.services import log_service
 from app.util.result import Result
+from app.middlewares import require_role
 
 log_bp = Blueprint('log', __name__)
 
 @log_bp.route('/query', methods=['GET'])
+@require_role('operator')
 def query_logs():
     """
     查询日志接口
@@ -32,6 +34,7 @@ def query_logs():
         return Result.success(data)
 
 @log_bp.route('/get_log_details', methods=['GET'])
+@require_role('operator')
 def get_log_details():
     """
     获取日志明细内容

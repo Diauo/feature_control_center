@@ -126,6 +126,22 @@ def list_users():
     )
 
 
+@user_bp.route('/me/customers', methods=['GET'])
+@require_role('operator')
+def get_my_customers():
+    """获取当前用户关联的客户"""
+    # 获取当前用户ID
+    current_user_id = get_jwt_identity()
+    
+    # 调用服务层获取用户关联的客户
+    customers = user_service.get_user_associated_customers(current_user_id)
+    
+    # 转换为客户数据列表
+    customers_data = [customer.to_dict() for customer in customers]
+    
+    return Result.success(customers_data)
+
+
 @user_bp.route('/<int:user_id>', methods=['GET'])
 @require_role('admin')
 def get_user(user_id):

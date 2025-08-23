@@ -1,12 +1,14 @@
 // axios is included via script tag, so we use the global axios object
 const axios = window.axios;
 import authService from '../services/authService.js';
-
+import { useNotifications } from '../composables/useNotifications.js';
 // 创建axios实例
 const apiClient = axios.create({
     baseURL: '/api',
     timeout: 10000,
 });
+
+const { addNotification } = useNotifications();
 
 // 请求拦截器
 apiClient.interceptors.request.use(
@@ -53,6 +55,14 @@ apiClient.interceptors.response.use(
                 // 刷新失败，重定向到登录页
                 window.location.href = '/login';
             }
+        }
+        
+        // 如果是403权限不足错误
+        if (error.response?.status === 403) {
+            // 显示权限不足的错误消息
+            console.error('Permission denied:', error.response?.data || 'You do not have permission to perform this action.');
+            // 可以在这里添加全局的错误提示，比如显示一个通知
+            addNotification('权限不足', '您没有执行此操作的权限', 'error');
         }
         
         return Promise.reject(error);

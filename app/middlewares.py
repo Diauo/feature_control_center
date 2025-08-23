@@ -100,11 +100,14 @@ def require_role(required_role):
                 return f(*args, **kwargs)
             
             # 检查其他角色的权限
+            # 如果需要管理员权限，但用户不是管理员，则拒绝访问
             if required_role == 'admin' and user_role != 'admin':
                 return '权限不足', 403
-            if required_role == 'manager' and user_role != 'manager':
+            # 如果需要操作员权限，但用户不是操作员，则拒绝访问
+            if required_role == 'operator' and user_role != 'operator':
                 return '权限不足', 403
-            if required_role == 'operator' and user_role not in ['operator', 'manager']:
+            # 如果需要其他角色权限，但用户角色不匹配，则拒绝访问
+            if required_role not in ['admin', 'operator'] and user_role != required_role:
                 return '权限不足', 403
             
             return f(*args, **kwargs)
@@ -114,7 +117,7 @@ def require_role(required_role):
 def require_customer_access():
     """
     客户访问权限装饰器
-    确保客户经理只能访问其关联客户的数据
+    确保操作员只能访问其关联客户的数据
     """
     from functools import wraps
     from flask import request
@@ -150,8 +153,8 @@ def require_customer_access():
             if request.user_role == 'admin':
                 return f(*args, **kwargs)
             
-            # 客户经理只能访问其关联客户的数据
-            if request.user_role == 'manager':
+            # 操作员只能访问其关联客户的数据
+            if request.user_role == 'operator':
                 # 获取请求中的客户ID
                 customer_id = request.args.get('customer_id') or (request.json.get('customer_id') if request.json else None)
                 if customer_id:

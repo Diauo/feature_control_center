@@ -12,12 +12,16 @@ class User(Base_model):
     
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
-    role = db.Column(db.Enum('admin', 'manager', 'operator'), nullable=False, default='operator')
+    role = db.Column(db.Enum('admin', 'operator'), nullable=False, default='operator')
     email = db.Column(db.String(128), unique=True, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     
-    # 关联关系
-    customer_associations = db.relationship('UserCustomer', back_populates='user')
+    # 和 UserCustomer 对应的反向关系
+    customer_associations = db.relationship(
+        "UserCustomer",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
     
     def set_password(self, password):
         """设置用户密码"""
@@ -37,7 +41,7 @@ class User(Base_model):
 class UserCustomer(Base_model):
     __tablename__ = 'base_user_customer'
     __info__ = ''' 用户-客户关联表
-        用于客户经理权限控制，关联用户和客户
+        用于操作员权限控制，关联用户和客户
     '''
     
     user_id = db.Column(db.Integer, db.ForeignKey('base_user.id'), nullable=False)
