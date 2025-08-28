@@ -10,6 +10,7 @@ try:
     from app.scheduler import task_scheduler
 except ImportError:
     task_scheduler = None
+    
 def convert_schedule_to_cron(schedule_type, interval_value=None, interval_unit=None, daily_time=None):
     """
     将新的时间定义方式转换为cron表达式
@@ -41,6 +42,24 @@ def get_all_scheduled_tasks():
     """
     try:
         tasks = ScheduledTask.query.all()
+        # 关联功能名称
+        for task in tasks:
+            feature = Feature.query.get(task.feature_id)
+            if feature:
+                task.feature_name = feature.name
+        return True, "成功", [task.to_dict() for task in tasks]
+    except Exception as e:
+        return False, f"查询失败: {str(e)}", []
+
+def get_scheduled_tasks_by_customer_id(customer_id):
+    """
+    根据客户ID获取定时任务
+    :param customer_id: 客户ID
+    :return: (bool, str, list) 是否成功，提示信息，定时任务列表
+    """
+    try:
+        # 通过功能表关联客户ID来过滤定时任务
+        tasks = db.session.query(ScheduledTask).join(Feature, ScheduledTask.feature_id == Feature.id).filter(Feature.customer_id == customer_id).all()
         # 关联功能名称
         for task in tasks:
             feature = Feature.query.get(task.feature_id)

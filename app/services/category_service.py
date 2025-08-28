@@ -37,6 +37,60 @@ def add_category(category):
 
     pass;
 
+def add_category_service(category_data):
+    """
+    添加新分类服务
+    :param category_data: 分类数据字典
+    :return: (bool, str, dict) 是否成功，提示信息，添加后的数据
+    """
+    try:
+        category = Category(
+            name=category_data.get('name'),
+            parent_id=category_data.get('parent_id'),
+            customer_id=category_data.get('customer_id'),
+            description=category_data.get('description'),
+            order_id=category_data.get('order_id'),
+            depth_level=category_data.get('depth_level')
+        )
+        db.session.add(category)
+        db.session.commit()
+        return True, "添加成功", category.to_dict()
+    except Exception as e:
+        db.session.rollback()
+        return False, f"添加失败: {str(e)}", None
+
+def update_category_service(category_id, category_data):
+    """
+    更新指定ID的分类服务
+    :param category_id: 分类ID
+    :param category_data: 分类数据字典
+    :return: (bool, str, dict) 是否成功，提示信息，更新后的数据
+    """
+    try:
+        category = Category.query.get(category_id)
+        if not category:
+            return False, f"未找到ID为[{category_id}]的分类", None
+        
+        # 更新字段
+        if 'name' in category_data:
+            category.name = category_data['name']
+        if 'parent_id' in category_data:
+            category.parent_id = category_data['parent_id']
+        if 'customer_id' in category_data:
+            category.customer_id = category_data['customer_id']
+        if 'description' in category_data:
+            category.description = category_data['description']
+        if 'order_id' in category_data:
+            category.order_id = category_data['order_id']
+        if 'depth_level' in category_data:
+            category.depth_level = category_data['depth_level']
+            
+        db.session.commit()
+        return True, "更新成功", category.to_dict()
+    except Exception as e:
+        db.session.rollback()
+        return False, f"更新失败: {str(e)}", None
+
 def del_category(category_id):
     sql = text('''select count(id) child_count from base_category where parent_id = :category_id''')
     result = db.session.execute(sql, {'category_id': category_id})

@@ -87,6 +87,93 @@ def query_logs(feature_id=None, start_date=None, end_date=None, keyword=None, ex
     except Exception as e:
         return False, f"查询失败: {str(e)}", []
 
+def query_logs_by_customer_id(customer_id, feature_id=None, start_date=None, end_date=None, keyword=None, execution_type=None):
+    """
+    根据客户ID查询日志
+    :param customer_id: 客户ID
+    :param feature_id: 功能ID
+    :param start_date: 开始日期
+    :param end_date: 结束日期
+    :param keyword: 关键字
+    :param execution_type: 执行类型 (manual/scheduled)
+    :return: (bool, str, list) 是否成功，提示信息，日志列表
+    """
+    try:
+        # 构建查询条件
+        query = db.session.query(
+            FeatureExecutionLog.id,
+            FeatureExecutionLog.feature_id,
+            FeatureExecutionLog.request_id,
+            FeatureExecutionLog.start_time,
+            FeatureExecutionLog.end_time,
+            FeatureExecutionLog.status,
+            FeatureExecutionLog.client_id,
+            FeatureExecutionLog.execution_type,
+            Feature.name.label('feature_name')
+        ).join(Feature, FeatureExecutionLog.feature_id == Feature.id)
+        
+        # 添加过滤条件
+        filters = []
+        
+        # 按客户ID过滤（通过功能表关联）
+        filters.append(Feature.customer_id == customer_id)
+        
+        # 按功能ID过滤
+        if feature_id:
+            filters.append(FeatureExecutionLog.feature_id == feature_id)
+            
+        # 按日期范围过滤
+        if start_date:
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d')
+            filters.append(FeatureExecutionLog.start_time >= start_datetime)
+            
+        if end_date:
+            end_datetime = datetime.strptime(end_date, '%Y-%m-%d')
+            # 将结束日期设置为当天的23:59:59
+            end_datetime = end_datetime.replace(hour=23, minute=59, second=59)
+            filters.append(FeatureExecutionLog.start_time <= end_datetime)
+            
+        # 按关键字过滤
+        if keyword:
+            filters.append(or_(
+                FeatureExecutionLog.request_id.like(f'%{keyword}%'),
+                FeatureExecutionLog.status.like(f'%{keyword}%'),
+                Feature.name.like(f'%{keyword}%')
+            ))
+            
+        # 按执行类型过滤
+        if execution_type:
+            filters.append(FeatureExecutionLog.execution_type == execution_type)
+            
+        # 应用过滤条件
+        if filters:
+            query = query.filter(and_(*filters))
+            
+        # 按开始时间倒序排列
+        query = query.order_by(desc(FeatureExecutionLog.start_time))
+        
+        # 执行查询
+        logs = query.all()
+        
+        # 转换为字典列表
+        result = []
+        for log in logs:
+            result.append({
+                'id': log.id,
+                'feature_id': log.feature_id,
+                'request_id': log.request_id,
+                'start_time': log.start_time.strftime('%Y-%m-%d %H:%M:%S') if log.start_time else None,
+                'end_time': log.end_time.strftime('%Y-%m-%d %H:%M:%S') if log.end_time else None,
+                'status': log.status,
+                'client_id': log.client_id,
+                'execution_type': log.execution_type,
+                'feature_name': log.feature_name
+            })
+            
+        return True, "查询成功", result
+    except Exception as e:
+        return False, f"查询失败: {str(e)}", []
+
 def get_log_details(log_id):
     """
     获取日志明细内容
@@ -117,3 +204,81 @@ def get_log_details(log_id):
         return True, "查询成功", result
     except Exception as e:
         return False, f"查询失败: {str(e)}", None
+
+def add_log(log_data):
+    """
+    添加新日志
+    :param log_data: 日志数据字典
+    :return: (bool, str, dict) 是否成功，提示信息，添加后的数据
+    """
+    try:
+        log = FeatureExecutionLog(
+            feature_id=log_data.get('feature_id'),
+            request_id=log_data.get('request_id'),
+            start_time=log_data.get('start_time'),
+            end_time=log_data.get('end_time'),
+            status=log_data.get('status'),
+            client_id=log_data.get('client_id'),
+            execution_type=log_data.get('execution_type', 'manual')
+        )
+        db.session.add(log)
+        db.session.commit()
+        return True, "添加成功", log.to_dict()
+    except Exception as e:
+        db.session.rollback()
+        return False, f"添加失败: {str(e)}", None
+
+def del_log(log_id):
+    """
+    删除指定ID的日志
+    :param log_id: 日志ID
+    :return: (bool, str) 是否成功，提示信息
+    """
+    try:
+        log = FeatureExecutionLog.query.get(log_id)
+        if not log:
+            return False, f"未找到ID为[{log_id}]的日志"
+        
+        # 同时删除关联的日志明细
+        FeatureExecutionLogDetail.query.filter_by(log_id=log_id).delete()
+        
+        db.session.delete(log)
+        db.session.commit()
+        return True, "删除成功"
+    except Exception as e:
+        db.session.rollback()
+        return False, f"删除失败: {str(e)}"
+
+def update_log(log_id, log_data):
+    """
+    更新指定ID的日志
+    :param log_id: 日志ID
+    :param log_data: 日志数据字典
+    :return: (bool, str, dict) 是否成功，提示信息，更新后的数据
+    """
+    try:
+        log = FeatureExecutionLog.query.get(log_id)
+        if not log:
+            return False, f"未找到ID为[{log_id}]的日志", None
+        
+        # 更新字段
+        if 'feature_id' in log_data:
+            log.feature_id = log_data['feature_id']
+        if 'request_id' in log_data:
+            log.request_id = log_data['request_id']
+        if 'start_time' in log_data:
+            log.start_time = log_data['start_time']
+        if 'end_time' in log_data:
+            log.end_time = log_data['end_time']
+        if 'status' in log_data:
+            log.status = log_data['status']
+        if 'client_id' in log_data:
+            log.client_id = log_data['client_id']
+        if 'execution_type' in log_data:
+            log.execution_type = log_data['execution_type']
+            
+        db.session.commit()
+        return True, "更新成功", log.to_dict()
+    except Exception as e:
+        db.session.rollback()
+        return False, f"更新失败: {str(e)}", None

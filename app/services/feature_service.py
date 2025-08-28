@@ -59,6 +59,7 @@ def get_feature_by_category_id(category_id, customer_id=None):
     sql = text(sql_str)
     result = db.session.execute(sql, params).fetchall()
     return True, "成功", model_to_dict(result, Feature)
+
 def add_feature(feature):
     """
     添加新功能
@@ -92,6 +93,24 @@ def update_feature(feature_id, name=None, description=None, customer_id=None, ca
         feature.category_id = category_id
     db.session.commit()
     return True, "更新成功", feature.to_dict()
+
+def update_feature_service(feature_id, feature_data):
+    """
+    更新指定feature_id的功能信息服务
+    :param feature_id: 功能ID
+    :param feature_data: 功能数据字典
+    :return: (bool, str, dict) 是否成功，提示信息，更新后的数据
+    """
+    try:
+        return update_feature(
+            feature_id,
+            name=feature_data.get('name'),
+            description=feature_data.get('description'),
+            customer_id=feature_data.get('customer_id'),
+            category_id=feature_data.get('category_id')
+        )
+    except Exception as e:
+        return False, f"更新失败: {str(e)}", None
 
 def delete_feature(feature_id):
     """
