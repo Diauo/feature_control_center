@@ -2,18 +2,6 @@ import api from './api.js';
 
 const log_api = {
     /**
-     * 查询日志（根据用户角色自动选择）
-     * @param {Object} params - 查询参数
-     * @returns {Promise}
-     */
-    query(params) {
-        // 这个方法需要在调用时根据用户角色选择具体的实现
-        // 在useLogs.js中会根据用户角色调用具体的API方法
-        // 这里提供一个默认实现，实际使用时会被覆盖
-        return api.client.post('/log/query', params);
-    },
-    
-    /**
      * 查询日志（管理员）
      * @param {Object} params - 查询参数
      * @param {number} params.feature_id - 功能ID

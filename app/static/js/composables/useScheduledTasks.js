@@ -26,7 +26,7 @@ export function useScheduledTasks(addNotification, features, filter) {
     const loadScheduledTasks = async () => {
         scheduledTasksLoading.value = true;
         try {
-            const response = await api.scheduledTask.getAllScheduledTasks();
+            const response = await api.scheduledTask.get_scheduled_tasks();
             if (response.data.status) {
                 scheduledTasks.value = response.data.data || [];
             } else {
@@ -159,10 +159,10 @@ export function useScheduledTasks(addNotification, features, filter) {
             let response;
             if (scheduledTaskModal.value.mode === 'edit') {
                 // 编辑定时任务
-                response = await api.scheduledTask.updateScheduledTask(scheduledTaskModal.value.formData.id, formData);
+                response = await api.scheduledTask.update_scheduled_task(scheduledTaskModal.value.formData.id, formData);
             } else {
                 // 新增定时任务
-                response = await api.scheduledTask.addScheduledTask(formData);
+                response = await api.scheduledTask.add_scheduled_task(formData);
             }
             
             if (response.data.status) {
@@ -184,7 +184,7 @@ export function useScheduledTasks(addNotification, features, filter) {
         }
         
         try {
-            const response = await api.scheduledTask.deleteScheduledTask(id);
+            const response = await api.scheduledTask.del_scheduled_task(id);
             if (response.data.status) {
                 addNotification('定时任务删除成功');
                 await loadScheduledTasks();
@@ -199,7 +199,7 @@ export function useScheduledTasks(addNotification, features, filter) {
     // 启用定时任务
     const enableScheduledTask = async (id) => {
         try {
-            const response = await api.scheduledTask.enableScheduledTask(id);
+            const response = await api.scheduledTask.enable_scheduled_task(id);
             if (response.data.status) {
                 addNotification('定时任务启用成功');
                 await loadScheduledTasks();
@@ -214,7 +214,7 @@ export function useScheduledTasks(addNotification, features, filter) {
     // 禁用定时任务
     const disableScheduledTask = async (id) => {
         try {
-            const response = await api.scheduledTask.disableScheduledTask(id);
+            const response = await api.scheduledTask.disable_scheduled_task(id);
             if (response.data.status) {
                 addNotification('定时任务禁用成功');
                 await loadScheduledTasks();

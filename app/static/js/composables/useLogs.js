@@ -20,7 +20,7 @@ export function useLogs(addNotification) {
     const loadLogs = async () => {
         loading.value = true;
         try {
-            const response = await api.log.query(queryConditions.value);
+            const response = await api.log.get_logs(queryConditions.value);
             if (response.data.status) {
                 logs.value = response.data.data || [];
             } else {
