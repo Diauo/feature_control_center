@@ -1,6 +1,5 @@
-import os
-import time
-import threading
+import os, sys
+import subprocess
 import importlib.util
 from app.services import feature_service, customer_service, config_service
 from app import db
@@ -12,48 +11,73 @@ UPLOADED_FEATURE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "
 SCAN_INTERVAL = 60  # 每60秒全量扫描一次
 
 def load_feature_meta(script_path):
-    import sys
     module_name = None
     try:
+        logger.info(f"当前 Python 可执行文件: {sys.executable}")
+        logger.info(f"当前 Python 版本: {sys.version}")
+
         if os.path.isfile(script_path) and script_path.endswith('.py'):
-            # 处理单个.py文件
-            # 使用文件路径生成唯一的模块名
             module_name = f"feature_module_{hash(script_path) & 0x7FFFFFFF}"
             spec = importlib.util.spec_from_file_location(module_name, script_path)
             module = importlib.util.module_from_spec(spec)
-            # 将模块添加到sys.modules中，以支持相对导入
             sys.modules[module_name] = module
-            spec.loader.exec_module(module)
+            try:
+                spec.loader.exec_module(module)
+            except ModuleNotFoundError as e:
+                missing_module = e.name
+                logger.warning(f"检测到缺失依赖: {missing_module}, 正在尝试自动安装...")
+                _auto_install_dependency(missing_module)
+                # 再次尝试加载模块
+                spec.loader.exec_module(module)
+
             meta = getattr(module, "__meta__", None)
-            # 获取完元数据后立即从sys.modules中移除
             sys.modules.pop(module_name, None)
             return meta
+
         elif os.path.isdir(script_path):
-            # 处理模块目录
             init_file = os.path.join(script_path, "__init__.py")
             if os.path.exists(init_file):
-                # 使用目录路径生成唯一的模块名
                 module_name = f"feature_module_{hash(script_path) & 0x7FFFFFFF}"
                 spec = importlib.util.spec_from_file_location(module_name, init_file)
                 module = importlib.util.module_from_spec(spec)
-                # 将模块添加到sys.modules中，以支持相对导入
                 sys.modules[module_name] = module
-                spec.loader.exec_module(module)
+                try:
+                    spec.loader.exec_module(module)
+                except ModuleNotFoundError as e:
+                    missing_module = e.name
+                    logger.warning(f"检测到缺失依赖: {missing_module}, 正在尝试自动安装...")
+                    _auto_install_dependency(missing_module)
+                    spec.loader.exec_module(module)
+
                 meta = getattr(module, "__meta__", None)
-                # 获取完元数据后立即从sys.modules中移除所有相关模块
-                module_keys_to_remove = [key for key in sys.modules.keys() if key.startswith(module_name)]
+                module_keys_to_remove = [key for key in list(sys.modules.keys()) if key.startswith(module_name)]
                 for key in module_keys_to_remove:
                     sys.modules.pop(key, None)
                 return meta
+
         return None
+
     except Exception as e:
         logger.warning(f"加载功能脚本失败: {script_path}, 错误: {e}")
-        # 从sys.modules中移除可能已添加的模块
         if module_name:
-            module_keys_to_remove = [key for key in sys.modules.keys() if key.startswith(module_name)]
+            module_keys_to_remove = [key for key in list(sys.modules.keys()) if key.startswith(module_name)]
             for key in module_keys_to_remove:
                 sys.modules.pop(key, None)
         return None
+
+
+def _auto_install_dependency(package_name):
+    """
+    自动安装缺失依赖（仅限一次）
+    """
+    try:
+        logger.info(f"正在安装依赖包: {package_name} ...")
+        subprocess.check_call([
+            sys.executable, "-m", "pip", "install", package_name
+        ])
+        logger.info(f"依赖 {package_name} 安装成功 ✓")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"自动安装依赖 {package_name} 失败: {e}")
 
 def scan_and_register_features():
     # 1. 获取数据库已有功能
