@@ -88,4 +88,4 @@ def create_app(config_class='app.config.Config'):
 
 def run_with_socketio(app):
     socketio.init_app(app)
-    socketio.run(app, host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True)
