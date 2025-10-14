@@ -137,8 +137,8 @@ export function useConfig(currentUser, addNotification, api) {
             if (configModal.value.mode === 'add') {
                 response = await api.config.add_config(configModal.value.formData);
             } else {
+                debugger;
                 response = await api.config.update_config(
-                    configModal.value.formData.id, 
                     configModal.value.formData
                 );
             }
