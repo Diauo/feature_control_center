@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>业务管理</title>
+    <script src="{{ url_for('static', filename='js/lib/vue.global.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lib/axios.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
+    <div id="app">
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="nav-links">
+                    <a href="/" class="nav-link">返回主页</a>
+                </div>
+                <div class="user-info" v-if="currentUser">
+                    <span>欢迎, {{ currentUser.username }}!</span>
+                    <button class="btn-logout" @click="logout">登出</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="content">
+            <!-- 页面切换 -->
+            <div class="sub-nav">
+                <a href="#" @click="currentPage = 'users'" :class="{ 'active': currentPage === 'users' }">用户管理</a>
+                <a href="#" @click="currentPage = 'customers'" :class="{ 'active': currentPage === 'customers' }">客户管理</a>
+            </div>
+
+            <!-- 用户管理 -->
+            <div v-if="currentPage === 'users'">
+                <h2>用户管理</h2>
+                <div class="table-actions">
+                    <button class="btn-primary" @click="openUserModal()">新增用户</button>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>角色</th>
+                            <th>关联客户</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="user in users" :key="user.id">
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.role }}</td>
+                            <td>{{ user.customers.map(c => c.name).join(', ') }}</td>
+                            <td>
+                                <button class="btn-edit" @click="openUserModal(user)">编辑</button>
+                                <button class="btn-danger" @click="deleteUser(user.id)">删除</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 客户管理 -->
+            <div v-if="currentPage === 'customers'">
+                <h2>客户管理</h2>
+                <div class="table-actions">
+                    <button class="btn-primary" @click="openCustomerModal()">新增客户</button>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>客户名称</th>
+                            <th>描述</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="customer in customers" :key="customer.id">
+                            <td>{{ customer.id }}</td>
+                            <td>{{ customer.name }}</td>
+                            <td>{{ customer.description }}</td>
+                            <td>
+                                <button class="btn-edit" @click="openCustomerModal(customer)">编辑</button>
+                                <button class="btn-danger" @click="deleteCustomer(customer.id)">删除</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 用户模态框 -->
+        <div class="modal-overlay" v-if="userModal.show" @click="closeUserModal"></div>
+        <div class="modal modal-center" v-if="userModal.show">
+            <div class="modal-content">
+                <h3>{{ userModal.isEdit ? '编辑用户' : '新增用户' }}</h3>
+                <form @submit.prevent="saveUser">
+                    <div class="form-group">
+                        <label>用户名:</label>
+                        <input type="text" v-model="userModal.data.username" required>
+                    </div>
+                    <div class="form-group">
+                        <label>邮箱:</label>
+                        <input type="email" v-model="userModal.data.email">
+                    </div>
+                    <div class="form-group">
+                        <label>密码 ({{ userModal.isEdit ? '留空则不修改' : '必填' }}):</label>
+                        <input type="password" v-model="userModal.data.password" :required="!userModal.isEdit">
+                    </div>
+                    <div class="form-group">
+                        <label>角色:</label>
+                        <select v-model="userModal.data.role">
+                            <option value="operator">Operator</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>关联客户:</label>
+                        <select v-model="userModal.data.associated_customers" multiple>
+                            <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+                                {{ customer.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">保存</button>
+                        <button type="button" class="btn-secondary" @click="closeUserModal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 客户模态框 -->
+        <div class="modal-overlay" v-if="customerModal.show" @click="closeCustomerModal"></div>
+        <div class="modal modal-center" v-if="customerModal.show">
+            <div class="modal-content">
+                <h3>{{ customerModal.isEdit ? '编辑客户' : '新增客户' }}</h3>
+                <form @submit.prevent="saveCustomer">
+                    <div class="form-group">
+                        <label>客户名称:</label>
+                        <input type="text" v-model="customerModal.data.name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>描述:</label>
+                        <textarea v-model="customerModal.data.description"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">保存</button>
+                        <button type="button" class="btn-secondary" @click="closeCustomerModal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script type="module" src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</body>
+</html>

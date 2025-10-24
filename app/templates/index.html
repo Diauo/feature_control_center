@@ -31,6 +31,10 @@
                         :class="['nav-link', currentPage === 'logs' ? 'active' : '']">日志查询</a>
                     <a href="#" @click="switchToConfig"
                         :class="['nav-link', currentPage === 'config' ? 'active' : '']">系统配置</a>
+                    <a href="#" v-if="currentUser && currentUser.role === 'admin'" class="nav-link"
+                        @click.prevent="$router.push('/admin')">
+                        业务管理
+                    </a>
                 </div>
                 <div class="user-info" v-if="currentUser">
                     <span>欢迎, {{ currentUser.username }}!</span>
@@ -47,32 +51,35 @@
                 </div>
                 <div class="features-grid">
                     <div class="sidebar-container">
-                    <div class="sidebar">
-                        <div class="sidebar-header">
-                            <div>分类</div>
-                            <div class="button" @click="toggleCategoryEdite()">编辑</div>
-                        </div>
-                        <div class="category">
-                            <div class="category-title" :class="{ 'category-selected': selectedCategory === null }" @click="handleCategoryToggle({id: null})">所有功能</div>
-                        </div>
-                        <div v-for="category in categories" :key="category.order_id" class="category">
-                            <!-- 顶层菜单 -->
-                            <div class="category-title" :class="{ 'category-selected': selectedCategory === category.id }">
-                                {{ category.name }}
-                                <div v-if="categorieEditMode" class="category-active-zone --category-active-zone-edit"
-                                    @click="handleCategoryToggle(category)"></div>
-                                <div v-if="!categorieEditMode"
-                                    class="category-active-zone --category-active-zone-normal"
-                                    @click="handleCategoryToggle(category)"></div>
-                                <span v-if="categorieEditMode" class="button button--add-category"
-                                    @click="openAddCategoryModal(category, $event)">📝</span>
+                        <div class="sidebar">
+                            <div class="sidebar-header">
+                                <div>分类</div>
+                                <div class="button" @click="toggleCategoryEdite()">编辑</div>
+                            </div>
+                            <div class="category">
+                                <div class="category-title" :class="{ 'category-selected': selectedCategory === null }"
+                                    @click="handleCategoryToggle({id: null})">所有功能</div>
+                            </div>
+                            <div v-for="category in categories" :key="category.order_id" class="category">
+                                <!-- 顶层菜单 -->
+                                <div class="category-title"
+                                    :class="{ 'category-selected': selectedCategory === category.id }">
+                                    {{ category.name }}
+                                    <div v-if="categorieEditMode"
+                                        class="category-active-zone --category-active-zone-edit"
+                                        @click="handleCategoryToggle(category)"></div>
+                                    <div v-if="!categorieEditMode"
+                                        class="category-active-zone --category-active-zone-normal"
+                                        @click="handleCategoryToggle(category)"></div>
+                                    <span v-if="categorieEditMode" class="button button--add-category"
+                                        @click="openAddCategoryModal(category, $event)">📝</span>
+                                </div>
+                            </div>
+                            <div class="category">
+                                <div v-if="categorieEditMode" class="category-title category-title--add"
+                                    @click="openAddCategoryModal(null, $event)">+ 新增分类 +</div>
                             </div>
                         </div>
-                        <div class="category">
-                            <div v-if="categorieEditMode" class="category-title category-title--add"
-                                @click="openAddCategoryModal(null, $event)">+ 新增分类 +</div>
-                        </div>
-                    </div>
                     </div>
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
                         @click="openFeatureWindow(feature)">
@@ -88,14 +95,15 @@
                     <!-- 筛选和操作按钮 -->
                     <div class="scheduled-tasks-actions">
                         <div class="scheduled-tasks-filter">
-                            <input type="text" v-model="scheduledTaskFilter" placeholder="按任务名称筛选" @input="filterScheduledTasks">
+                            <input type="text" v-model="scheduledTaskFilter" placeholder="按任务名称筛选"
+                                @input="filterScheduledTasks">
                         </div>
                         <button class="btn-primary" @click="openAddScheduledTaskModal">新增定时任务</button>
                         <button class="btn-secondary" @click="loadScheduledTasks" :disabled="scheduledTasksLoading">
                             {{ scheduledTasksLoading ? '刷新中...' : '刷新' }}
                         </button>
                     </div>
-                    
+
                     <!-- 定时任务列表 -->
                     <div class="scheduled-tasks-list">
                         <table class="scheduled-tasks-table">
@@ -119,7 +127,8 @@
                                     <td>{{ task.feature_name }}</td>
                                     <td>{{ task.cron_expression }}</td>
                                     <td>
-                                        <span :class="['status-badge', task.is_active ? 'status-active' : 'status-inactive']">
+                                        <span
+                                            :class="['status-badge', task.is_active ? 'status-active' : 'status-inactive']">
                                             {{ task.is_active ? '启用' : '禁用' }}
                                         </span>
                                     </td>
@@ -127,23 +136,28 @@
                                     <td>{{ formatDateTime(task.next_run_time) }}</td>
                                     <td>
                                         <div :title="task.description || '无描述'">
-                                            {{ task.description ? (task.description.length > 20 ? task.description.substring(0, 20) + '...' : task.description) : '-' }}
+                                            {{ task.description ? (task.description.length > 20 ?
+                                            task.description.substring(0, 20) + '...' : task.description) : '-' }}
                                         </div>
                                     </td>
                                     <td>
                                         <button class="btn-edit" @click="openEditScheduledTaskModal(task)">编辑</button>
-                                        <button v-if="task.is_active" class="btn-warning" @click="disableScheduledTask(task.id)">禁用</button>
-                                        <button v-else class="btn-confirm" @click="enableScheduledTask(task.id)">启用</button>
+                                        <button v-if="task.is_active" class="btn-warning"
+                                            @click="disableScheduledTask(task.id)">禁用</button>
+                                        <button v-else class="btn-confirm"
+                                            @click="enableScheduledTask(task.id)">启用</button>
                                         <button class="btn-danger" @click="deleteScheduledTask(task.id)">删除</button>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- 新增/编辑定时任务模态框 -->
-                    <div class="modal-overlay" v-bind:class="{ active: scheduledTaskModal.show }" @click="closeScheduledTaskModal"></div>
-                    <div class="modal modal-center scheduled-task-modal" v-bind:class="{ active: scheduledTaskModal.show }">
+                    <div class="modal-overlay" v-bind:class="{ active: scheduledTaskModal.show }"
+                        @click="closeScheduledTaskModal"></div>
+                    <div class="modal modal-center scheduled-task-modal"
+                        v-bind:class="{ active: scheduledTaskModal.show }">
                         <div class="modal-content">
                             <h3>{{ scheduledTaskModal.mode === 'edit' ? '编辑定时任务' : '新增定时任务' }}</h3>
                             <form @submit.prevent="saveScheduledTask">
@@ -160,7 +174,7 @@
                                         </option>
                                     </select>
                                 </div>
-<div class="form-group">
+                                <div class="form-group">
                                     <label>执行方式:</label>
                                     <select v-model="scheduledTaskModal.formData.scheduleType">
                                         <option value="interval">按间隔执行</option>
@@ -168,12 +182,13 @@
                                         <option value="cron">Cron表达式（高级）</option>
                                     </select>
                                 </div>
-                                
+
                                 <!-- 按间隔执行 -->
                                 <div v-if="scheduledTaskModal.formData.scheduleType === 'interval'" class="form-group">
                                     <label>间隔时间:</label>
                                     <div class="interval-inputs">
-                                        <input type="number" v-model="scheduledTaskModal.formData.intervalValue" min="1" required>
+                                        <input type="number" v-model="scheduledTaskModal.formData.intervalValue" min="1"
+                                            required>
                                         <select v-model="scheduledTaskModal.formData.intervalUnit">
                                             <option value="minutes">分钟</option>
                                             <option value="hours">小时</option>
@@ -181,17 +196,18 @@
                                         </select>
                                     </div>
                                 </div>
-                                
+
                                 <!-- 每天指定时间执行 -->
                                 <div v-if="scheduledTaskModal.formData.scheduleType === 'daily'" class="form-group">
                                     <label>执行时间:</label>
                                     <input type="time" v-model="scheduledTaskModal.formData.dailyTime" required>
                                 </div>
-                                
+
                                 <!-- Cron表达式 -->
                                 <div v-if="scheduledTaskModal.formData.scheduleType === 'cron'" class="form-group">
                                     <label>Cron表达式:</label>
-                                    <input type="text" v-model="scheduledTaskModal.formData.cron_expression" placeholder="例如: 0 0 * * *">
+                                    <input type="text" v-model="scheduledTaskModal.formData.cron_expression"
+                                        placeholder="例如: 0 0 * * *">
                                     <div class="form-help">Cron表达式格式: 分 时 日 月 周</div>
                                 </div>
                                 <div class="form-group">
@@ -207,7 +223,8 @@
                                 </div>
                                 <div class="form-actions">
                                     <button type="submit" class="btn-primary">保存</button>
-                                    <button type="button" class="btn-secondary" @click="closeScheduledTaskModal">取消</button>
+                                    <button type="button" class="btn-secondary"
+                                        @click="closeScheduledTaskModal">取消</button>
                                 </div>
                             </form>
                         </div>
@@ -217,7 +234,7 @@
 
             <!-- 日志查询页面 -->
             <div v-if="currentPage === 'logs'">
-                
+
                 <!-- 查询条件 -->
                 <div class="log-query-form">
                     <div class="form-row">
@@ -230,22 +247,22 @@
                                 </option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group">
                             <label>开始日期:</label>
                             <input type="date" v-model="queryConditions.start_date">
                         </div>
-                        
+
                         <div class="form-group">
                             <label>结束日期:</label>
                             <input type="date" v-model="queryConditions.end_date">
                         </div>
-                        
+
                         <div class="form-group">
                             <label>关键字:</label>
                             <input type="text" v-model="queryConditions.keyword" placeholder="请求ID或状态">
                         </div>
-                        
+
                         <div class="form-group">
                             <label>执行类型:</label>
                             <select v-model="queryConditions.execution_type">
@@ -254,7 +271,7 @@
                                 <option value="scheduled">定时任务</option>
                             </select>
                         </div>
-                        
+
                         <div class="form-group form-actions">
                             <button class="btn-primary" @click="loadLogs" :disabled="logsLoading">
                                 {{ logsLoading ? '查询中...' : '查询' }}
@@ -263,7 +280,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- 日志列表 -->
                 <div class="logs-container">
                     <table class="logs-table">
@@ -302,10 +319,12 @@
                             </tr>
                         </tbody>
                     </table>
-                    
+
                     <!-- 日志明细模态框 -->
-                    <div class="modal-overlay" v-bind:class="{ active: logDetailList.length > 0 }" @click="logDetailList = []"></div>
-                    <div class="modal modal-center modal-log-detail" v-bind:class="{ active: logDetailList.length > 0 }">
+                    <div class="modal-overlay" v-bind:class="{ active: logDetailList.length > 0 }"
+                        @click="logDetailList = []"></div>
+                    <div class="modal modal-center modal-log-detail"
+                        v-bind:class="{ active: logDetailList.length > 0 }">
                         <div class="modal-content">
                             <h3>日志明细</h3>
                             <!-- 筛选条件 -->
@@ -318,7 +337,8 @@
                             <div class="log-detail-list">
                                 <div v-for="detail in filteredLogDetails" :key="detail.id" class="log-detail-item">
                                     <span class="log-timestamp">[{{ detail.timestamp }}]</span>
-                                    <span :class="['log-level', 'log-level-' + detail.level.toLowerCase()]">{{ detail.level }}</span>
+                                    <span :class="['log-level', 'log-level-' + detail.level.toLowerCase()]">{{
+                                        detail.level }}</span>
                                     <span class="log-message">{{ detail.message }}</span>
                                 </div>
                             </div>
@@ -346,36 +366,36 @@
                                     </option>
                                 </select>
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>功能名称:</label>
                                 <input type="text" v-model="filterConditions.feature_name" placeholder="模糊匹配功能名称">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>配置名称:</label>
                                 <input type="text" v-model="filterConditions.config_name" placeholder="模糊匹配配置名称">
                             </div>
-                            
+
                             <div class="form-group">
                                 <label>配置描述:</label>
                                 <input type="text" v-model="filterConditions.config_description" placeholder="模糊匹配配置描述">
                             </div>
-                            
+
                             <div class="form-group form-actions">
                                 <button class="btn-primary" @click="loadFilteredConfigs">筛选</button>
                                 <button class="btn-secondary" @click="resetFilterConditions">重置</button>
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- 操作按钮区域 -->
                     <div class="config-actions" v-if="currentUser && currentUser.role === 'admin'">
                         <button class="btn-primary" @click="openAddConfigModal">新增配置</button>
                         <button class="btn-secondary" @click="reloadConfig">重载配置</button>
                         <button class="btn-warning" @click="cleanupConfig">清理无效配置</button>
                     </div>
-                    
+
                     <!-- 配置列表 -->
                     <div class="config-list">
                         <table class="config-table">
@@ -406,9 +426,10 @@
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <!-- 新增/编辑配置模态框 -->
-                    <div class="modal-overlay" v-bind:class="{ active: configModal.show }" @click="closeConfigModal"></div>
+                    <div class="modal-overlay" v-bind:class="{ active: configModal.show }" @click="closeConfigModal">
+                    </div>
                     <div class="modal modal-center" v-bind:class="{ active: configModal.show }">
                         <div class="modal-content">
                             <h3>{{ configModal.mode === 'edit' ? '编辑配置' : '新增配置' }}</h3>
@@ -436,7 +457,7 @@
                             </form>
                         </div>
                     </div>
-                    
+
                 </div>
             </div>
         </div>
@@ -461,7 +482,8 @@
                 <button class="btn-cancel" @click="closeFeatureWindow">关闭</button>
                 <button class="btn-danger" v-if="featureRunning" @click="stopFeature">终止运行</button>
                 <button class="btn-confirm" v-else @click="runFeature">运行</button>
-                <button class="btn-danger" v-if="!featureRunning && currentUser && currentUser.role === 'admin'" @click="confirmDeleteFeature">删除</button>
+                <button class="btn-danger" v-if="!featureRunning && currentUser && currentUser.role === 'admin'"
+                    @click="confirmDeleteFeature">删除</button>
             </div>
         </div>
 
@@ -505,7 +527,8 @@
         </div>
 
         <!-- 功能注册模态框 -->
-        <div class="modal-overlay" v-bind:class="{ active: registerFeatureModal.show }" @click="closeRegisterFeatureModal"></div>
+        <div class="modal-overlay" v-bind:class="{ active: registerFeatureModal.show }"
+            @click="closeRegisterFeatureModal"></div>
         <div class="modal modal-center" v-bind:class="{ active: registerFeatureModal.show }">
             <div class="modal-content">
                 <h3>注册新功能</h3>
@@ -514,7 +537,7 @@
                         <label>功能脚本文件:</label>
                         <input type="file" @change="handleFileUpload" accept=".py,.zip" required>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>功能名称（为空使用脚本内置信息）:</label>
                         <input type="text" v-model="registerFeatureModal.name">
@@ -541,7 +564,7 @@
                             </option>
                         </select>
                     </div>
-                    
+
                     <div class="form-actions">
                         <button type="submit" class="btn-primary" :disabled="!registerFeatureModal.file">注册</button>
                         <button type="button" class="btn-secondary" @click="closeRegisterFeatureModal">取消</button>
@@ -553,4 +576,5 @@
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script type="module" src="[| url_for('static', filename='js/index.js') |]"></script>
 </body>
+
 </html>

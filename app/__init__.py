@@ -48,6 +48,8 @@ def create_app(config_class='app.config.Config'):
     app.register_blueprint(log_bp, url_prefix='/api/log')
     from app.controllers.scheduled_task_controller import scheduled_task_bp
     app.register_blueprint(scheduled_task_bp, url_prefix='/api/scheduled-task')
+    from app.controllers.admin_controller import admin_bp
+    app.register_blueprint(admin_bp)
 
     # 注册中间件
     log_request(app)

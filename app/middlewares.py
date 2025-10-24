@@ -13,6 +13,7 @@ JWT_WHITELIST = [
     ('/api/users/login', 'POST'),
     ('/api/users/register', 'POST'),
     ('/api/users/refresh', 'POST'),
+    ('/admin', 'GET'),
     ('/', 'GET'),
     ('/login', 'GET'),
     ('/favicon.ico', 'GET'),
