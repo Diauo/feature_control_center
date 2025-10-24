@@ -83,12 +83,11 @@ const user_api = {
 
   /**
    * 更新用户（仅管理员）
-   * @param {number} userId - 用户ID
-   * @param {Object} userData - 用户数据
+   * @param {Object} userData - 用户数据，必须包含id
    * @returns {Promise}
    */
-  updateUser(userId, userData) {
-    return api.client.put(`/users/${userId}`, userData);
+  updateUser(userData) {
+    return api.client.post('/users/update_user', userData);
   },
 
   /**
@@ -97,7 +96,7 @@ const user_api = {
    * @returns {Promise}
    */
   deleteUser(userId) {
-    return api.client.delete(`/users/${userId}`);
+    return api.client.post('/users/delete_user', { id: userId });
   }
 };
 

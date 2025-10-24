@@ -31,10 +31,8 @@
                         :class="['nav-link', currentPage === 'logs' ? 'active' : '']">日志查询</a>
                     <a href="#" @click="switchToConfig"
                         :class="['nav-link', currentPage === 'config' ? 'active' : '']">系统配置</a>
-                    <a href="#" v-if="currentUser && currentUser.role === 'admin'" class="nav-link"
-                        @click.prevent="$router.push('/admin')">
-                        业务管理
-                    </a>
+                   <a href="/admin" v-if="currentUser && currentUser.role === 'admin'"
+                       :class="['nav-link']">业务管理</a>
                 </div>
                 <div class="user-info" v-if="currentUser">
                     <span>欢迎, {{ currentUser.username }}!</span>

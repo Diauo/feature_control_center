@@ -10,6 +10,7 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'dev-secret-key'
     JWT_ACCESS_TOKEN_EXPIRES = 3600  # 1小时
     JWT_REFRESH_TOKEN_EXPIRES = 86400  # 24小时
+    JWT_TOKEN_LOCATION = ['headers', 'cookies']
 
 class Test_config(Config):
     TESTING = True

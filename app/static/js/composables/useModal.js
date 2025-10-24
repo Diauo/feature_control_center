@@ -51,7 +51,7 @@ export function useModal() {
     const closeModal = () => {
         modal.value.show = false;
         modal.value.title = "";
-        modal.value.fields = "";
+        modal.value.fields = [];
         modal.value.description = "";
         modal.value.modalParams = {};
         modal.value.params = {};

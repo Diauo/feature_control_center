@@ -22,6 +22,11 @@ class User(Base_model):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+
+    @property
+    def customers(self):
+        """返回与此用户关联的客户列表"""
+        return [assoc.customer for assoc in self.customer_associations]
     
     def set_password(self, password):
         """设置用户密码"""
@@ -35,6 +40,7 @@ class User(Base_model):
         """将用户对象转换为字典，但不包含密码哈希"""
         data = super().to_dict()
         data.pop('password_hash', None)  # 移除密码哈希字段
+        data['customers'] = [customer.to_dict() for customer in self.customers]
         return data
 
 

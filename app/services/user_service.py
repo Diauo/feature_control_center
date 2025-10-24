@@ -90,12 +90,14 @@ def register_user(username, password, email=None, role='operator', associated_cu
         # 如果是操作员且有关联客户，创建关联记录
         if role == 'operator' and associated_customers:
             for customer_id in associated_customers:
-                user_customer = UserCustomer(
-                    user_id=user.id,
-                    customer_id=customer_id
-                )
-                db.session.add(user_customer)
+                customer = Customer.query.get(customer_id)
+                if customer:
+                    user_customer = UserCustomer(user=user, customer=customer)
+                    db.session.add(user_customer)
             db.session.commit()
+        # 如果是管理员，确保没有关联
+        elif role == 'admin':
+            pass # 管理员不处理客户关联
         
         # 返回用户信息（不包含密码哈希）
         user_data = user.to_dict()
@@ -192,12 +194,32 @@ def update_user(user_id, **kwargs):
             return False, "用户名已存在", None
     
     # 更新用户信息
-    for key, value in kwargs.items():
-        if key == 'password':
-            user.set_password(value)
-        elif hasattr(user, key):
-            setattr(user, key, value)
+    role = kwargs.get('role', user.role)
     
+    # 更新其他字段
+    for key, value in kwargs.items():
+        if key == 'password' and value:
+            user.set_password(value)
+        elif key not in ['password', 'associated_customers', 'id']:
+            if hasattr(user, key):
+                setattr(user, key, value)
+
+    # 根据角色处理客户关联
+    if role == 'admin':
+        # 如果是管理员，清空所有关联
+        user.customer_associations.clear()
+    else: # 如果是 'operator'
+        associated_customers = kwargs.get('associated_customers')
+        if associated_customers is not None:
+            # 清空现有关联
+            user.customer_associations.clear()
+            # 添加新关联
+            for customer_id in associated_customers:
+                customer = Customer.query.get(customer_id)
+                if customer:
+                    user_customer = UserCustomer(user=user, customer=customer)
+                    db.session.add(user_customer)
+
     # 保存到数据库
     try:
         db.session.commit()

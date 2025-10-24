@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 import app.services.user_service as user_service
 from app import db
-from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, set_access_cookies, set_refresh_cookies, unset_jwt_cookies
 from app.middlewares import require_role
 from app.util.result import Result
 
@@ -51,11 +51,20 @@ def login():
     
     # 返回用户信息和令牌
     user_data = user.to_dict()
-    return Result.success({
+    response_data = {
         'access_token': access_token,
         'refresh_token': refresh_token,
         'user': user_data
-    })
+    }
+    
+    # 创建响应
+    response, _ = Result.success(response_data)
+    
+    # 将令牌设置到Cookie中
+    set_access_cookies(response, access_token)
+    set_refresh_cookies(response, refresh_token)
+    
+    return response
 
 
 @user_bp.route('/refresh', methods=['POST'])
@@ -87,9 +96,13 @@ def refresh():
 @user_bp.route('/logout', methods=['POST'])
 def logout():
     """用户登出"""
-    # 在实际应用中，可能需要将令牌加入黑名单
-    # 这里我们简化处理，直接返回成功
-    return Result.success("登出成功")
+    # 创建响应
+    response, _ = Result.success("登出成功")
+    
+    # 清除JWT Cookie
+    unset_jwt_cookies(response)
+    
+    return response
 
 
 @user_bp.route('/me', methods=['GET'])
@@ -179,11 +192,14 @@ def create_user():
         return Result.business_error(message, 400 if "用户名已存在" in message else 500)
 
 
-@user_bp.route('/<int:user_id>', methods=['PUT'])
+@user_bp.route('/update_user', methods=['POST'])
 @require_role('admin')
-def update_user_endpoint(user_id):
+def update_user_endpoint():
     """更新用户"""
     data = request.get_json()
+    user_id = data.get('id')
+    if not user_id:
+        return Result.bad_request("缺少用户ID")
     
     # 调用服务层更新用户
     success, message, user_data = user_service.update_user(user_id, **data)
@@ -194,10 +210,15 @@ def update_user_endpoint(user_id):
         return Result.business_error(message, 400 if "用户名已存在" in message else 404)
 
 
-@user_bp.route('/<int:user_id>', methods=['DELETE'])
+@user_bp.route('/delete_user', methods=['POST'])
 @require_role('admin')
-def delete_user(user_id):
+def delete_user():
     """删除用户"""
+    data = request.get_json()
+    user_id = data.get('id')
+    if not user_id:
+        return Result.bad_request("缺少用户ID")
+
     # 调用服务层删除用户
     success, message = user_service.delete_user(user_id)
     

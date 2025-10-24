@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>业务管理</title>
-    <script src="{{ url_for('static', filename='js/lib/vue.global.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/lib/axios.min.js') }}"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <script src="[| url_for('static', filename='js/lib/vue.global.min.js') |]"></script>
+    <script src="[| url_for('static', filename='js/lib/axios.min.js') |]"></script>
+    <link rel="stylesheet" href="[| url_for('static', filename='css/index.css') |]">
 </head>
 <body>
     <div id="app">
@@ -33,7 +33,7 @@
             <div v-if="currentPage === 'users'">
                 <h2>用户管理</h2>
                 <div class="table-actions">
-                    <button class="btn-primary" @click="openUserModal()">新增用户</button>
+                    <button class="btn-primary" @click="openUserModal(null, $event)">新增用户</button>
                 </div>
                 <table class="data-table">
                     <thead>
@@ -52,9 +52,9 @@
                             <td>{{ user.username }}</td>
                             <td>{{ user.email }}</td>
                             <td>{{ user.role }}</td>
-                            <td>{{ user.customers.map(c => c.name).join(', ') }}</td>
+                            <td>{{ user.customers && user.customers.length > 0 ? user.customers.map(c => c.name).join(', ') : '无' }}</td>
                             <td>
-                                <button class="btn-edit" @click="openUserModal(user)">编辑</button>
+                                <button class="btn-edit" @click="openUserModal(user, $event)">编辑</button>
                                 <button class="btn-danger" @click="deleteUser(user.id)">删除</button>
                             </td>
                         </tr>
@@ -66,7 +66,7 @@
             <div v-if="currentPage === 'customers'">
                 <h2>客户管理</h2>
                 <div class="table-actions">
-                    <button class="btn-primary" @click="openCustomerModal()">新增客户</button>
+                    <button class="btn-primary" @click="openCustomerModal(null, $event)">新增客户</button>
                 </div>
                 <table class="data-table">
                     <thead>
@@ -83,7 +83,7 @@
                             <td>{{ customer.name }}</td>
                             <td>{{ customer.description }}</td>
                             <td>
-                                <button class="btn-edit" @click="openCustomerModal(customer)">编辑</button>
+                                <button class="btn-edit" @click="openCustomerModal(customer, $event)">编辑</button>
                                 <button class="btn-danger" @click="deleteCustomer(customer.id)">删除</button>
                             </td>
                         </tr>
@@ -92,70 +92,43 @@
             </div>
         </div>
 
-        <!-- 用户模态框 -->
-        <div class="modal-overlay" v-if="userModal.show" @click="closeUserModal"></div>
-        <div class="modal modal-center" v-if="userModal.show">
-            <div class="modal-content">
-                <h3>{{ userModal.isEdit ? '编辑用户' : '新增用户' }}</h3>
-                <form @submit.prevent="saveUser">
-                    <div class="form-group">
-                        <label>用户名:</label>
-                        <input type="text" v-model="userModal.data.username" required>
-                    </div>
-                    <div class="form-group">
-                        <label>邮箱:</label>
-                        <input type="email" v-model="userModal.data.email">
-                    </div>
-                    <div class="form-group">
-                        <label>密码 ({{ userModal.isEdit ? '留空则不修改' : '必填' }}):</label>
-                        <input type="password" v-model="userModal.data.password" :required="!userModal.isEdit">
-                    </div>
-                    <div class="form-group">
-                        <label>角色:</label>
-                        <select v-model="userModal.data.role">
-                            <option value="operator">Operator</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>关联客户:</label>
-                        <select v-model="userModal.data.associated_customers" multiple>
-                            <option v-for="customer in customers" :key="customer.id" :value="customer.id">
-                                {{ customer.name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary">保存</button>
-                        <button type="button" class="btn-secondary" @click="closeUserModal">取消</button>
-                    </div>
-                </form>
+        <!-- 通用模态框 -->
+        <div class="modal-overlay" v-bind:class="{ active: modal.show }" @click="closeModal()"></div>
+        <div class="modal" ref="modalWindow" v-bind:class="{ active: modal.show }" :style="{
+            top: modal.top + 'px',
+            left: modal.left + 'px'
+          }">
+            <h1>{{ modal.title }}</h1>
+            <hr class="modal-line">
+            <h4 v-html="modal.description"></h4>
+            <hr class="modal-line">
+            <!-- 动态渲染输入框 -->
+            <div v-for="(field, index) in modal.fields" :key="index">
+                <label :id="'modal-label-'+index" class="modal-label">{{ field.label }}:</label>
+                <input :id="'modal-input-'+index" class="modal-input" v-if="field.type === 'text'" type="text"
+                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label">
+                <input :id="'modal-input-'+index" class="modal-input" v-if="field.type === 'password'" type="password"
+                    v-model="modal.modalParams[field.key]" :placeholder="field.placeholder">
+                <textarea :id="'modal-textarea-'+index" class="modal-input" v-else-if="field.type === 'textarea'"
+                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label"></textarea>
+                <select :id="'modal-select-'+index" class="modal-input" v-else-if="field.type === 'select'" v-model="modal.modalParams[field.key]">
+                    <option v-for="(option, i) in field.options" :key="i" :value="option.value">{{ option.text }}</option>
+                </select>
+                <select :id="'modal-multiselect-'+index" class="modal-input" v-else-if="field.type === 'multiselect'" v-model="modal.modalParams[field.key]" multiple>
+                    <option v-for="(option, i) in field.options" :key="i" :value="option.value">{{ option.text }}</option>
+                </select>
             </div>
-        </div>
-
-        <!-- 客户模态框 -->
-        <div class="modal-overlay" v-if="customerModal.show" @click="closeCustomerModal"></div>
-        <div class="modal modal-center" v-if="customerModal.show">
-            <div class="modal-content">
-                <h3>{{ customerModal.isEdit ? '编辑客户' : '新增客户' }}</h3>
-                <form @submit.prevent="saveCustomer">
-                    <div class="form-group">
-                        <label>客户名称:</label>
-                        <input type="text" v-model="customerModal.data.name" required>
-                    </div>
-                    <div class="form-group">
-                        <label>描述:</label>
-                        <textarea v-model="customerModal.data.description"></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary">保存</button>
-                        <button type="button" class="btn-secondary" @click="closeCustomerModal">取消</button>
-                    </div>
-                </form>
+            <hr class="modal-line">
+            <div style="display: flex;">
+                <div v-for="(button, index) in modal.buttons" :key="index">
+                    <button :id="'modal-button-'+index" :class="button.style" @click="button.function(button.param)">
+                        {{ button.label }} </button>
+                </div>
+                <button id="modal-button-cancel" class="btn-cancel" @click="closeModal">取消</button>
             </div>
         </div>
     </div>
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-    <script type="module" src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script type="module" src="[| url_for('static', filename='js/admin.js') |]"></script>
 </body>
 </html>

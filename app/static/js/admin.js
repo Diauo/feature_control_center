@@ -1,31 +1,21 @@
 const { createApp, ref, onMounted } = Vue;
 import authService from './services/authService.js';
 import { useAuth } from './composables/useAuth.js';
+import { useModal } from './composables/useModal.js';
 import api from './api/api.js';
 
 createApp({
     setup() {
         const currentUser = ref(null);
         const { logout } = useAuth(authService, api);
+        const { modal, modalWindow, openModal, closeModal } = useModal();
         const currentPage = ref('users');
         const users = ref([]);
         const customers = ref([]);
 
-        const userModal = ref({
-            show: false,
-            isEdit: false,
-            data: {}
-        });
-
-        const customerModal = ref({
-            show: false,
-            isEdit: false,
-            data: {}
-        });
-
         const loadUsers = async () => {
             try {
-                const response = await api.user.list_users();
+                const response = await api.user.getUsers();
                 if (response.data.status) {
                     users.value = response.data.data.items;
                 } else {
@@ -38,7 +28,7 @@ createApp({
 
         const loadCustomers = async () => {
             try {
-                const response = await api.customer.get_customers();
+                const response = await api.customer.get_all_customer();
                 if (response.data.status) {
                     customers.value = response.data.data;
                 } else {
@@ -49,37 +39,29 @@ createApp({
             }
         };
 
-        const openUserModal = (user = null) => {
-            if (user) {
-                userModal.value.isEdit = true;
-                userModal.value.data = { ...user, password: '', associated_customers: user.customers.map(c => c.id) };
-            } else {
-                userModal.value.isEdit = false;
-                userModal.value.data = { username: '', email: '', password: '', role: 'operator', associated_customers: [] };
-            }
-            userModal.value.show = true;
-        };
-
-        const closeUserModal = () => {
-            userModal.value.show = false;
-        };
-
         const saveUser = async () => {
-            const userData = { ...userModal.value.data };
-            if (userModal.value.isEdit && !userData.password) {
+            const userData = { ...modal.value.modalParams };
+            const isEdit = userData.id !== undefined;
+
+            if (isEdit && !userData.password) {
                 delete userData.password;
+            }
+            
+            // 如果角色是管理员，确保不关联任何客户
+            if (userData.role === 'admin') {
+                userData.associated_customers = [];
             }
 
             try {
                 let response;
-                if (userModal.value.isEdit) {
-                    response = await api.user.update_user(userData.id, userData);
+                if (isEdit) {
+                    response = await api.user.updateUser(userData);
                 } else {
-                    response = await api.user.create_user(userData);
+                    response = await api.user.createUser(userData);
                 }
 
                 if (response.data.status) {
-                    closeUserModal();
+                    closeModal();
                     await loadUsers();
                 } else {
                     alert('保存用户失败: ' + response.data.message);
@@ -89,13 +71,54 @@ createApp({
             }
         };
 
+        const openUserModal = (user = null, event) => {
+            const isEdit = user !== null;
+            const title = isEdit ? '编辑用户' : '新增用户';
+            
+            modal.value.modalParams = {
+                id: user ? user.id : undefined,
+                username: user ? user.username : '',
+                email: user ? user.email : '',
+                password: '',
+                role: user ? user.role : 'operator',
+                associated_customers: user && user.customers ? user.customers.map(c => c.id) : []
+            };
+            debugger;
+            const fields = [
+                { key: 'username', label: '用户名', type: 'text' },
+                { key: 'email', label: '邮箱', type: 'text' },
+                { key: 'password', label: '密码', type: 'password', placeholder: isEdit ? '留空则不修改' : '必填' },
+                {
+                    key: 'role',
+                    label: '角色',
+                    type: 'select',
+                    options: [
+                        { value: 'operator', text: 'Operator' },
+                        { value: 'admin', text: 'Admin' }
+                    ]
+                },
+                {
+                    key: 'associated_customers',
+                    label: '关联客户',
+                    type: 'multiselect',
+                    options: customers.value.map(c => ({ value: c.id, text: c.name })),
+                }
+            ];
+
+            const buttons = [
+                { label: '保存', style: 'btn-primary', function: saveUser }
+            ];
+
+            openModal(title, '', fields, buttons, event.target);
+        };
+
         const deleteUser = async (userId) => {
             if (!confirm('确定要删除此用户吗？')) {
                 return;
             }
 
             try {
-                const response = await api.user.delete_user(userId);
+                const response = await api.user.deleteUser(userId);
                 if (response.data.status) {
                     await loadUsers();
                 } else {
@@ -106,34 +129,20 @@ createApp({
             }
         };
 
-        const openCustomerModal = (customer = null) => {
-            if (customer) {
-                customerModal.value.isEdit = true;
-                customerModal.value.data = { ...customer };
-            } else {
-                customerModal.value.isEdit = false;
-                customerModal.value.data = { name: '', description: '' };
-            }
-            customerModal.value.show = true;
-        };
-
-        const closeCustomerModal = () => {
-            customerModal.value.show = false;
-        };
-
         const saveCustomer = async () => {
-            const customerData = { ...customerModal.value.data };
+            const customerData = { ...modal.value.modalParams };
+            const isEdit = customerData.id !== undefined;
 
             try {
                 let response;
-                if (customerModal.value.isEdit) {
+                if (isEdit) {
                     response = await api.customer.update_customer(customerData);
                 } else {
                     response = await api.customer.add_customer(customerData);
                 }
 
                 if (response.data.status) {
-                    closeCustomerModal();
+                    closeModal();
                     await loadCustomers();
                 } else {
                     alert('保存客户失败: ' + response.data.message);
@@ -143,13 +152,35 @@ createApp({
             }
         };
 
+        const openCustomerModal = (customer = null, event) => {
+            const isEdit = customer !== null;
+            const title = isEdit ? '编辑客户' : '新增客户';
+
+            modal.value.modalParams = {
+                id: customer ? customer.id : undefined,
+                name: customer ? customer.name : '',
+                description: customer ? customer.description : ''
+            };
+
+            const fields = [
+                { key: 'name', label: '客户名称', type: 'text' },
+                { key: 'description', label: '描述', type: 'textarea' }
+            ];
+
+            const buttons = [
+                { label: '保存', style: 'btn-primary', function: saveCustomer }
+            ];
+
+            openModal(title, '', fields, buttons, event.target);
+        };
+
         const deleteCustomer = async (customerId) => {
             if (!confirm('确定要删除此客户吗？')) {
                 return;
             }
 
             try {
-                const response = await api.customer.del_customer({ id: customerId });
+                const response = await api.customer.del_customer(customerId);
                 if (response.data.status) {
                     await loadCustomers();
                 } else {
@@ -161,13 +192,10 @@ createApp({
         };
 
         onMounted(async () => {
-            // 检查认证状态
             if (!authService.isAuthenticated()) {
                 window.location.href = '/login';
                 return;
             }
-
-            // 检查令牌是否过期
             if (authService.isTokenExpired()) {
                 const refreshSuccess = await authService.refreshAccessToken();
                 if (!refreshSuccess) {
@@ -175,36 +203,29 @@ createApp({
                     return;
                 }
             }
-
-            // 获取当前用户信息
             currentUser.value = authService.getCurrentUser();
-
-            // 验证用户角色
             if (!currentUser.value || currentUser.value.role !== 'admin') {
                 alert('您没有权限访问此页面。');
                 window.location.href = '/';
                 return;
             }
-
-            await loadUsers();
             await loadCustomers();
+            await loadUsers();
         });
 
         return {
             currentUser,
             logout,
+            modal,
+            modalWindow,
+            openModal,
+            closeModal,
             currentPage,
             users,
             customers,
-            userModal,
             openUserModal,
-            closeUserModal,
-            saveUser,
             deleteUser,
-            customerModal,
             openCustomerModal,
-            closeCustomerModal,
-            saveCustomer,
             deleteCustomer
         };
     }
