@@ -4,131 +4,407 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>业务管理</title>
-    <script src="[| url_for('static', filename='js/lib/vue.global.min.js') |]"></script>
-    <script src="[| url_for('static', filename='js/lib/axios.min.js') |]"></script>
-    <link rel="stylesheet" href="[| url_for('static', filename='css/index.css') |]">
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- 引入 Axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- 引入 Element Plus -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus Icons -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        #app {
+            height: 100vh;
+        }
+        .el-header {
+            background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #dcdfe6;
+        }
+        .header-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .main-card {
+            margin: 20px;
+        }
+        .table-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .search-input {
+            width: 300px;
+        }
+        .el-pagination {
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+        .admin-role-tip {
+            color: #E6A23C;
+            font-size: 12px;
+            margin-top: 5px;
+            line-height: 1.2;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
-        <nav class="nav">
-            <div class="nav-container">
-                <div class="nav-links">
-                    <a href="/" class="nav-link">返回主页</a>
-                </div>
-                <div class="user-info" v-if="currentUser">
+        <el-container>
+            <el-header>
+                <span class="header-title">功能管理中心</span>
+                <div>
                     <span>欢迎, {{ currentUser.username }}!</span>
-                    <button class="btn-logout" @click="logout">登出</button>
+                    <el-button type="info" link @click="logout">登出</el-button>
                 </div>
-            </div>
-        </nav>
+            </el-header>
+            <el-main>
+                <el-card class="main-card">
+                    <el-tabs v-model="activeTab">
+                        <el-tab-pane label="用户管理" name="users">
+                            <!-- 用户管理操作区 -->
+                            <div class="table-actions">
+                                <el-button type="primary" @click="openUserDialog(false)">
+                                    <el-icon><Plus /></el-icon> 新增用户
+                                </el-button>
+                                <el-input v-model="userSearchKeyword" placeholder="按用户名搜索" class="search-input" @input="handleUserSearch" clearable>
+                                    <template #append><el-button :icon="Search"></el-button></template>
+                                </el-input>
+                            </div>
 
-        <div class="content">
-            <!-- 页面切换 -->
-            <div class="sub-nav">
-                <a href="#" @click="currentPage = 'users'" :class="{ 'active': currentPage === 'users' }">用户管理</a>
-                <a href="#" @click="currentPage = 'customers'" :class="{ 'active': currentPage === 'customers' }">客户管理</a>
-            </div>
+                            <!-- 用户数据表格 -->
+                            <el-table :data="userList" v-loading="usersLoading" style="width: 100%">
+                                <el-table-column prop="id" label="ID" width="80"></el-table-column>
+                                <el-table-column prop="username" label="用户名"></el-table-column>
+                                <el-table-column prop="role" label="角色"></el-table-column>
+                                <el-table-column prop="customers" label="关联客户">
+                                    <template #default="scope">{{ scope.row.customers && scope.row.customers.length > 0 ? scope.row.customers.map(c => c.name).join(', ') : '无' }}</template>
+                                </el-table-column>
+                                <el-table-column prop="created_date" label="创建时间"></el-table-column>
+                                <el-table-column label="操作" width="200">
+                                    <template #default="scope">
+                                        <el-button size="small" @click="openUserDialog(true, scope.row)"><el-icon><Edit /></el-icon> 编辑</el-button>
+                                        <el-button size="small" type="danger" @click="handleUserDelete(scope.row.id)"><el-icon><Delete /></el-icon> 删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
 
-            <!-- 用户管理 -->
-            <div v-if="currentPage === 'users'">
-                <h2>用户管理</h2>
-                <div class="table-actions">
-                    <button class="btn-primary" @click="openUserModal(null, $event)">新增用户</button>
-                </div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>用户名</th>
-                            <th>邮箱</th>
-                            <th>角色</th>
-                            <th>关联客户</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="user in users" :key="user.id">
-                            <td>{{ user.id }}</td>
-                            <td>{{ user.username }}</td>
-                            <td>{{ user.email }}</td>
-                            <td>{{ user.role }}</td>
-                            <td>{{ user.customers && user.customers.length > 0 ? user.customers.map(c => c.name).join(', ') : '无' }}</td>
-                            <td>
-                                <button class="btn-edit" @click="openUserModal(user, $event)">编辑</button>
-                                <button class="btn-danger" @click="deleteUser(user.id)">删除</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                            <!-- 用户分页 -->
+                            <el-pagination background layout="prev, pager, next, total" :total="userTotal" :page-size="userPageSize" v-model:current-page="userCurrentPage"></el-pagination>
+                        </el-tab-pane>
 
-            <!-- 客户管理 -->
-            <div v-if="currentPage === 'customers'">
-                <h2>客户管理</h2>
-                <div class="table-actions">
-                    <button class="btn-primary" @click="openCustomerModal(null, $event)">新增客户</button>
-                </div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>客户名称</th>
-                            <th>描述</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="customer in customers" :key="customer.id">
-                            <td>{{ customer.id }}</td>
-                            <td>{{ customer.name }}</td>
-                            <td>{{ customer.description }}</td>
-                            <td>
-                                <button class="btn-edit" @click="openCustomerModal(customer, $event)">编辑</button>
-                                <button class="btn-danger" @click="deleteCustomer(customer.id)">删除</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                        <el-tab-pane label="客户管理" name="customers">
+                            <!-- 客户管理操作区 -->
+                            <div class="table-actions">
+                                <el-button type="primary" @click="openCustomerDialog(false)">
+                                    <el-icon><Plus /></el-icon> 新增客户
+                                </el-button>
+                            </div>
 
-        <!-- 通用模态框 -->
-        <div class="modal-overlay" v-bind:class="{ active: modal.show }" @click="closeModal()"></div>
-        <div class="modal" ref="modalWindow" v-bind:class="{ active: modal.show }" :style="{
-            top: modal.top + 'px',
-            left: modal.left + 'px'
-          }">
-            <h1>{{ modal.title }}</h1>
-            <hr class="modal-line">
-            <h4 v-html="modal.description"></h4>
-            <hr class="modal-line">
-            <!-- 动态渲染输入框 -->
-            <div v-for="(field, index) in modal.fields" :key="index">
-                <label :id="'modal-label-'+index" class="modal-label">{{ field.label }}:</label>
-                <input :id="'modal-input-'+index" class="modal-input" v-if="field.type === 'text'" type="text"
-                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label">
-                <input :id="'modal-input-'+index" class="modal-input" v-if="field.type === 'password'" type="password"
-                    v-model="modal.modalParams[field.key]" :placeholder="field.placeholder">
-                <textarea :id="'modal-textarea-'+index" class="modal-input" v-else-if="field.type === 'textarea'"
-                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label"></textarea>
-                <select :id="'modal-select-'+index" class="modal-input" v-else-if="field.type === 'select'" v-model="modal.modalParams[field.key]">
-                    <option v-for="(option, i) in field.options" :key="i" :value="option.value">{{ option.text }}</option>
-                </select>
-                <select :id="'modal-multiselect-'+index" class="modal-input" v-else-if="field.type === 'multiselect'" v-model="modal.modalParams[field.key]" multiple>
-                    <option v-for="(option, i) in field.options" :key="i" :value="option.value">{{ option.text }}</option>
-                </select>
-            </div>
-            <hr class="modal-line">
-            <div style="display: flex;">
-                <div v-for="(button, index) in modal.buttons" :key="index">
-                    <button :id="'modal-button-'+index" :class="button.style" @click="button.function(button.param)">
-                        {{ button.label }} </button>
-                </div>
-                <button id="modal-button-cancel" class="btn-cancel" @click="closeModal">取消</button>
-            </div>
-        </div>
+                            <!-- 客户数据表格 -->
+                            <el-table :data="allCustomers" v-loading="customersLoading" style="width: 100%">
+                                <el-table-column prop="id" label="ID" width="80"></el-table-column>
+                                <el-table-column prop="name" label="客户名称"></el-table-column>
+                                <el-table-column prop="description" label="描述"></el-table-column>
+                                <el-table-column label="操作" width="200">
+                                    <template #default="scope">
+                                        <el-button size="small" @click="openCustomerDialog(true, scope.row)"><el-icon><Edit /></el-icon> 编辑</el-button>
+                                        <el-button size="small" type="danger" @click="handleCustomerDelete(scope.row.id)"><el-icon><Delete /></el-icon> 删除</el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                        </el-tab-pane>
+                    </el-tabs>
+                </el-card>
+            </el-main>
+        </el-container>
+
+        <!-- 新增/编辑用户对话框 -->
+        <el-dialog v-model="userDialogVisible" :title="isUserEditMode ? '编辑用户' : '新增用户'" width="500px" @close="resetUserForm">
+            <el-form :model="userForm" ref="userFormRef" label-width="100px">
+                <el-form-item label="用户名" prop="username" required><el-input v-model="userForm.username"></el-input></el-form-item>
+                <el-form-item label="密码" prop="password" :required="!isUserEditMode"><el-input v-model="userForm.password" type="password" :placeholder="isUserEditMode ? '留空则不修改' : ''"></el-input></el-form-item>
+                <el-form-item label="角色" prop="role" required>
+                    <el-select v-model="userForm.role" placeholder="请选择角色">
+                        <el-option label="管理员" value="admin"></el-option>
+                        <el-option label="操作员" value="operator"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="关联客户" prop="customer_ids">
+                    <el-select v-model="userForm.customer_ids" multiple placeholder="请选择客户" style="width: 100%" :disabled="isCustomerSelectDisabled">
+                        <el-option v-for="customer in allCustomers" :key="customer.id" :label="customer.name" :value="customer.id"></el-option>
+                    </el-select>
+                    <div v-if="isCustomerSelectDisabled" class="admin-role-tip">管理员默认拥有所有客户权限，无需关联。</div>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="userDialogVisible = false">取消</el-button><el-button type="primary" @click="handleUserSubmit">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 新增/编辑客户对话框 -->
+        <el-dialog v-model="customerDialogVisible" :title="isCustomerEditMode ? '编辑客户' : '新增客户'" width="500px" @close="resetCustomerForm">
+            <el-form :model="customerForm" ref="customerFormRef" label-width="100px">
+                <el-form-item label="客户名称" prop="name" required><el-input v-model="customerForm.name"></el-input></el-form-item>
+                <el-form-item label="描述" prop="description"><el-input v-model="customerForm.description" type="textarea"></el-input></el-form-item>
+            </el-form>
+            <template #footer><el-button @click="customerDialogVisible = false">取消</el-button><el-button type="primary" @click="handleCustomerSubmit">确定</el-button></template>
+        </el-dialog>
     </div>
-    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-    <script type="module" src="[| url_for('static', filename='js/admin.js') |]"></script>
+
+    <script type="module">
+        const { createApp, ref, onMounted, computed, watch } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+        const { Search, Plus, Edit, Delete } = ElementPlusIconsVue;
+
+        // 动态导入统一的 API 入口模块
+        const api = (await import("[| url_for('static', filename='js/api/api.js') |]")).default;
+
+        const app = createApp({
+            setup() {
+                // --- 通用状态 ---
+                const currentUser = ref({ username: '...' });
+                const activeTab = ref('users');
+
+                // --- 用户管理状态 (后端分页) ---
+                const usersLoading = ref(true);
+                const userList = ref([]); // 只存储当前页的用户
+                const userTotal = ref(0); // 用户总数
+                const userSearchKeyword = ref('');
+                const userCurrentPage = ref(1);
+                const userPageSize = ref(10);
+                const userDialogVisible = ref(false);
+                const isUserEditMode = ref(false);
+                const userForm = ref({ id: null, username: '', password: '', role: 'operator', customer_ids: [] });
+                const userFormRef = ref(null);
+
+                // --- 客户管理状态 (前端处理) ---
+                const customersLoading = ref(true);
+                const allCustomers = ref([]);
+                const customerDialogVisible = ref(false);
+                const isCustomerEditMode = ref(false);
+                const customerForm = ref({ id: null, name: '', description: '' });
+                const customerFormRef = ref(null);
+
+                // --- 计算属性 ---
+                const isCustomerSelectDisabled = computed(() => userForm.value.role === 'admin');
+
+                // --- 侦听器 ---
+                // 监听角色变化，如果是管理员则清空客户选择
+                watch(() => userForm.value.role, (newRole) => {
+                    if (newRole === 'admin') userForm.value.customer_ids = [];
+                });
+
+                // 监听用户分页变化，触发后端请求
+                watch(userCurrentPage, () => {
+                    fetchUsers();
+                });
+
+                // --- API 调用方法 ---
+                const fetchCurrentUser = async () => {
+                    try {
+                        const response = await api.user.getCurrentUser();
+                        if (response.data.code === 200) {
+                            currentUser.value = response.data.data;
+                        }
+                    } catch (error) {
+                        ElMessage.error('获取当前用户信息失败');
+                    }
+                };
+
+                // **已重构**: 实现后端分页和搜索
+                const fetchUsers = async () => {
+                    usersLoading.value = true;
+                    try {
+                        const params = {
+                            page: userCurrentPage.value,
+                            per_page: userPageSize.value,
+                            username: userSearchKeyword.value
+                        };
+                        const response = await api.user.getUsers(params);
+                        if (response.data.code === 200) {
+                            userList.value = response.data.data.items;
+                            userTotal.value = response.data.data.pagination.total;
+                        } else {
+                            ElMessage.error(response.data.message || '获取用户列表失败');
+                        }
+                    } catch (error) {
+                        ElMessage.error('请求错误，无法获取用户列表');
+                    } finally {
+                        usersLoading.value = false;
+                    }
+                };
+
+                const fetchCustomers = async () => {
+                    customersLoading.value = true;
+                    try {
+                        const response = await api.customer.get_all_customer();
+                        if (response.data.code === 200) {
+                            allCustomers.value = response.data.data;
+                        } else {
+                            ElMessage.error(response.data.message || '获取客户列表失败');
+                        }
+                    } catch (error) {
+                        ElMessage.error('请求错误，无法获取客户列表');
+                    } finally {
+                        customersLoading.value = false;
+                    }
+                };
+
+                const logout = async () => {
+                    try {
+                        await api.user.logout();
+                        ElMessage.success('已登出');
+                        setTimeout(() => window.location.href = '/login', 500);
+                    } catch (error) {
+                        ElMessage.error('登出失败');
+                    }
+                };
+
+                // --- 用户管理方法 ---
+                let searchTimeout = null;
+                const handleUserSearch = () => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        userCurrentPage.value = 1; // 搜索时重置到第一页
+                        fetchUsers();
+                    }, 300); // 防抖
+                };
+
+                const resetUserForm = () => {
+                    userForm.value = { id: null, username: '', password: '', role: 'operator', customer_ids: [] };
+                    userFormRef.value?.resetFields();
+                };
+                const openUserDialog = (isEdit, userData = null) => {
+                    isUserEditMode.value = isEdit;
+                    if (isEdit && userData) {
+                        userForm.value = {
+                            id: userData.id,
+                            username: userData.username,
+                            password: '',
+                            role: userData.role,
+                            customer_ids: userData.customers ? userData.customers.map(c => c.id) : []
+                        };
+                    } else {
+                        resetUserForm();
+                    }
+                    userDialogVisible.value = true;
+                };
+                const handleUserSubmit = async () => {
+                    try {
+                        const payload = { ...userForm.value };
+                        if (isUserEditMode.value && !payload.password) delete payload.password;
+                        
+                        const apiCall = isUserEditMode.value ? api.user.updateUser : api.user.createUser;
+                        const response = await apiCall(payload);
+
+                        if (response.data.code === 200) {
+                            ElMessage.success(response.data.message || '操作成功');
+                            userDialogVisible.value = false;
+                            await fetchUsers(); // 重新加载当前页数据
+                        } else {
+                            ElMessage.error(response.data.message || '操作失败');
+                        }
+                    } catch (error) {
+                        ElMessage.error('请求失败');
+                    }
+                };
+                const handleUserDelete = (userId) => {
+                    ElMessageBox.confirm('确定要删除该用户吗？此操作不可撤销。', '警告', { type: 'warning' })
+                        .then(async () => {
+                            try {
+                                const response = await api.user.deleteUser(userId);
+                                if (response.data.code === 200) {
+                                    ElMessage.success('删除成功');
+                                    await fetchUsers(); // 重新加载当前页数据
+                                } else {
+                                    ElMessage.error(response.data.message || '删除失败');
+                                }
+                            } catch (error) {
+                                ElMessage.error('请求失败');
+                            }
+                        }).catch(() => {});
+                };
+
+                // --- 客户管理方法 ---
+                const resetCustomerForm = () => {
+                    customerForm.value = { id: null, name: '', description: '' };
+                    customerFormRef.value?.resetFields();
+                };
+                const openCustomerDialog = (isEdit, customerData = null) => {
+                    isCustomerEditMode.value = isEdit;
+                    if (isEdit && customerData) {
+                        customerForm.value = { ...customerData };
+                    } else {
+                        resetCustomerForm();
+                    }
+                    customerDialogVisible.value = true;
+                };
+                const handleCustomerSubmit = async () => {
+                    try {
+                        const apiCall = isCustomerEditMode.value ? api.customer.update_customer : api.customer.add_customer;
+                        const response = await apiCall(customerForm.value);
+
+                        if (response.data.code === 200) {
+                            ElMessage.success(response.data.message || '操作成功');
+                            customerDialogVisible.value = false;
+                            await fetchCustomers();
+                        } else {
+                            ElMessage.error(response.data.message || '操作失败');
+                        }
+                    } catch (error) {
+                        ElMessage.error('请求失败');
+                    }
+                };
+                const handleCustomerDelete = (customerId) => {
+                    ElMessageBox.confirm('确定要删除该客户吗？', '警告', { type: 'warning' })
+                        .then(async () => {
+                            try {
+                                const response = await api.customer.del_customer(customerId);
+                                if (response.data.code === 200) {
+                                    ElMessage.success('删除成功');
+                                    await fetchCustomers();
+                                } else {
+                                    ElMessage.error(response.data.message || '删除失败');
+                                }
+                            } catch (error) {
+                                ElMessage.error('请求失败');
+                            }
+                        }).catch(() => {});
+                };
+
+                // --- 生命周期 ---
+                onMounted(() => {
+                    fetchCurrentUser();
+                    fetchUsers();
+                    fetchCustomers();
+                });
+
+                return {
+                    // Common
+                    currentUser, activeTab, logout,
+                    // User Management
+                    usersLoading, userList, userTotal, userSearchKeyword, userCurrentPage, userPageSize,
+                    userDialogVisible, isUserEditMode, userForm, userFormRef, isCustomerSelectDisabled,
+                    handleUserSearch, openUserDialog, handleUserSubmit, handleUserDelete,
+                    // Customer Management
+                    customersLoading, allCustomers, customerDialogVisible, isCustomerEditMode, customerForm, customerFormRef,
+                    openCustomerDialog, handleCustomerSubmit, handleCustomerDelete,
+                    // Icons
+                    Search, Plus, Edit, Delete
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
 </body>
 </html>
