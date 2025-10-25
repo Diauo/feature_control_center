@@ -7,11 +7,11 @@ client_sid_map = {}  # client_id -> sid
 sid_client_map = {}  # sid -> client_id
 
 class FeatureNamespace(Namespace):
-    def on_connect(self):
+    def on_connect(self, sid, environ):
         print("WebSocket 已连接")
-    def on_disconnect(self):
+    def on_disconnect(self, sid):
         print("WebSocket 已断开")
-    def on_register(self, data):
+    def on_register(self, sid, data):
         client_id = data.get("client_id")
         sid = request.sid
         if client_id:
