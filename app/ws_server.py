@@ -11,7 +11,7 @@ class FeatureNamespace(Namespace):
         print("WebSocket 已连接")
     def on_disconnect(self, sid=None):
         print("WebSocket 已断开")
-    def on_register(self, sid, data):
+    def on_register(self, data):
         client_id = data.get("client_id")
         sid = request.sid
         if client_id:
