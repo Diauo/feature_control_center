@@ -187,7 +187,7 @@ def create_user():
     )
     
     if success:
-        return Result.success(user_data, code=201)
+        return Result.success(user_data, code=200)
     else:
         return Result.business_error(message, 400 if "用户名已存在" in message else 500)
 
