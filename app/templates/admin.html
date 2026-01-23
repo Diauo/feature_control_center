@@ -139,8 +139,8 @@
                         <el-option label="操作员" value="operator"></el-option>
                     </el-select>
                 </el-form-item>
-                <el-form-item label="关联客户" prop="customer_ids">
-                    <el-select v-model="userForm.customer_ids" multiple placeholder="请选择客户" style="width: 100%" :disabled="isCustomerSelectDisabled">
+                <el-form-item label="关联客户" prop="associated_customers">
+                    <el-select v-model="userForm.associated_customers" multiple placeholder="请选择客户" style="width: 100%" :disabled="isCustomerSelectDisabled">
                         <el-option v-for="customer in allCustomers" :key="customer.id" :label="customer.name" :value="customer.id"></el-option>
                     </el-select>
                     <div v-if="isCustomerSelectDisabled" class="admin-role-tip">管理员默认拥有所有客户权限，无需关联。</div>
@@ -182,7 +182,7 @@
                 const userPageSize = ref(10);
                 const userDialogVisible = ref(false);
                 const isUserEditMode = ref(false);
-                const userForm = ref({ id: null, username: '', password: '', role: 'operator', customer_ids: [] });
+                const userForm = ref({ id: null, username: '', password: '', role: 'operator', associated_customers: [] });
                 const userFormRef = ref(null);
 
                 // --- 客户管理状态 (前端处理) ---
@@ -199,7 +199,7 @@
                 // --- 侦听器 ---
                 // 监听角色变化，如果是管理员则清空客户选择
                 watch(() => userForm.value.role, (newRole) => {
-                    if (newRole === 'admin') userForm.value.customer_ids = [];
+                    if (newRole === 'admin') userForm.value.associated_customers = [];
                 });
 
                 // 监听用户分页变化，触发后端请求
@@ -279,7 +279,7 @@
                 };
 
                 const resetUserForm = () => {
-                    userForm.value = { id: null, username: '', password: '', role: 'operator', customer_ids: [] };
+                    userForm.value = { id: null, username: '', password: '', role: 'operator', associated_customers: [] };
                     userFormRef.value?.resetFields();
                 };
                 const openUserDialog = (isEdit, userData = null) => {
@@ -290,7 +290,7 @@
                             username: userData.username,
                             password: '',
                             role: userData.role,
-                            customer_ids: userData.customers ? userData.customers.map(c => c.id) : []
+                            associated_customers: userData.customers ? userData.customers.map(c => c.id) : []
                         };
                     } else {
                         resetUserForm();
