@@ -1,7 +1,7 @@
 const { ref, computed } = Vue
 import api from '../api/api.js';
 
-export function useLogs(addNotification) {
+export function useLogs(currentUser, currentCustomer, addNotification) {
     // 日志相关状态
     const logs = ref([]);
     const logDetailList = ref([]);
@@ -20,7 +20,20 @@ export function useLogs(addNotification) {
     const loadLogs = async () => {
         loading.value = true;
         try {
-            const response = await api.log.get_logs(queryConditions.value);
+            let params = { ...queryConditions.value };
+            let response;
+            if (currentUser.value && currentUser.value.role === 'admin') {
+                // 管理员调用无鉴权接口
+                response = await api.log.get_logs(params);
+            } else if (currentCustomer.value) {
+                // 操作员调用鉴权接口，需要添加客户ID
+                params.customer_id = currentCustomer.value;
+                response = await api.log.get_logs_by_customer_id(params);
+            } else {
+                addNotification('请先选择客户');
+                loading.value = false;
+                return;
+            }
             if (response.data.status) {
                 logs.value = response.data.data || [];
             } else {

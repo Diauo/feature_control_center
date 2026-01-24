@@ -1,6 +1,6 @@
 const { ref } = Vue;
 
-export function useConfig(currentUser, addNotification, api) {
+export function useConfig(currentUser, currentCustomer, addNotification, api) {
     const configs = ref([]);
     const configModal = ref({
         show: false,
@@ -23,10 +23,25 @@ export function useConfig(currentUser, addNotification, api) {
         config_description: ''
     });
 
-    // 加载所有配置
+    // 加载配置
     const loadConfigs = async () => {
         try {
-            const response = await api.config.get_all_config();
+            let response;
+            if (currentUser.value && currentUser.value.role === 'admin') {
+                // 管理员调用无鉴权接口
+                response = await api.config.get_all_config();
+            } else if (currentCustomer.value) {
+                // 操作员无配置调用权限，返回空列表
+                response = {
+                    data: {
+                        status: true,
+                        data: []
+                    }
+                }
+            } else {
+                addNotification('请先选择客户');
+                return;
+            }
             if (response.data.status) {
                 configs.value = response.data.data;
             } else {
@@ -54,6 +69,11 @@ export function useConfig(currentUser, addNotification, api) {
             }
             if (filterConditions.value.config_description) {
                 params.config_description = filterConditions.value.config_description;
+            }
+            
+            // 如果不是管理员，添加客户ID参数
+            if (!(currentUser.value && currentUser.value.role === 'admin') && currentCustomer.value) {
+                params.customer_id = currentCustomer.value;
             }
             
             const response = await api.config.get_filtered_config(params);

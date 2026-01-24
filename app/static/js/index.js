@@ -110,7 +110,7 @@ createApp({
             deleteConfig,
             reloadConfig,
             cleanupConfig
-        } = useConfig(currentUser, addNotification, api);
+        } = useConfig(currentUser, currentCustomer, addNotification, api);
         
         const { logout } = useAuth(authService, api);
         
@@ -123,7 +123,7 @@ createApp({
             loadLogDetailList,
             setQueryConditions,
             resetQueryConditions
-        } = useLogs(addNotification);
+        } = useLogs(currentUser, currentCustomer, addNotification);
         
         // 定时任务筛选
         const scheduledTaskFilter = ref('');
@@ -141,7 +141,7 @@ createApp({
             enableScheduledTask,
             disableScheduledTask,
             filteredScheduledTasks
-        } = useScheduledTasks(addNotification, features, scheduledTaskFilter);
+        } = useScheduledTasks(currentUser, currentCustomer, addNotification, features, scheduledTaskFilter);
         
         // 日志明细筛选相关
         const logDetailFilter = ref('');
@@ -179,6 +179,25 @@ createApp({
         // 监听客户选择变化
         watch(currentCustomer, async (newCustomer, oldCustomer) => {
             await loadFeaturesByCustomer();
+            
+            // 如果是操作员，当客户变化时重新加载分类、配置和定时任务
+            if (currentUser.value && currentUser.value.role !== 'admin') {
+                // 重新加载分类
+                if (newCustomer) {
+                    const categoryResponse = await api.category.get_categories_by_customer_id(newCustomer);
+                    if (categoryResponse.data.status) {
+                        categories.value = categoryResponse.data.data;
+                    } else {
+                        addNotification(categoryResponse.data.message || '加载分类列表失败');
+                    }
+                }
+                
+                // 重新加载配置
+                await loadConfigs();
+                
+                // 重新加载定时任务
+                await loadScheduledTasks();
+            }
         });
 
 
@@ -187,8 +206,16 @@ createApp({
             currentPage.value = 'home';
             await loadFeaturesByCustomer();
             
-            // 重新加载分类数据
-            const response = await api.category.get_all_category();
+            // 根据用户角色加载分类数据
+            let response;
+            if (currentUser.value && currentUser.value.role === 'admin') {
+                response = await api.category.get_all_category();
+            } else if (currentCustomer.value) {
+                response = await api.category.get_categories_by_customer_id(currentCustomer.value);
+            } else {
+                addNotification('请先选择客户');
+                return;
+            }
             if (response.data.status) {
                 categories.value = response.data.data;
             } else {
@@ -237,12 +264,19 @@ createApp({
             await loadCustomers(api, addNotification);
             await loadFeaturesByCustomer();
             
-            // 获取所有分类
-            const response = await api.category.get_all_category();
-            if (response.data.status) {
-                categories.value = response.data.data;
+            // 根据用户角色获取分类
+            let categoryResponse;
+            if (currentUser.value && currentUser.value.role === 'admin') {
+                categoryResponse = await api.category.get_all_category();
+            } else if (currentCustomer.value) {
+                categoryResponse = await api.category.get_categories_by_customer_id(currentCustomer.value);
             } else {
-                addNotification(response.data.message || '加载分类列表失败');
+                addNotification('请先选择客户');
+            }
+            if (categoryResponse && categoryResponse.data.status) {
+                categories.value = categoryResponse.data.data;
+            } else if (categoryResponse) {
+                addNotification(categoryResponse.data.message || '加载分类列表失败');
             }
             
             // 加载配置

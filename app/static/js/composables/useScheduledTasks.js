@@ -1,7 +1,7 @@
 const { ref, computed } = Vue
 import api from '../api/api.js';
 
-export function useScheduledTasks(addNotification, features, filter) {
+export function useScheduledTasks(currentUser, currentCustomer, addNotification, features, filter) {
     // 定时任务相关状态
     const scheduledTasks = ref([]);
     const scheduledTasksLoading = ref(false);
@@ -26,7 +26,18 @@ export function useScheduledTasks(addNotification, features, filter) {
     const loadScheduledTasks = async () => {
         scheduledTasksLoading.value = true;
         try {
-            const response = await api.scheduledTask.get_scheduled_tasks();
+            let response;
+            if (currentUser.value && currentUser.value.role === 'admin') {
+                // 管理员调用无鉴权接口
+                response = await api.scheduledTask.get_scheduled_tasks();
+            } else if (currentCustomer.value) {
+                // 操作员调用鉴权接口
+                response = await api.scheduledTask.get_scheduled_tasks_by_customer_id(currentCustomer.value);
+            } else {
+                addNotification('请先选择客户');
+                scheduledTasksLoading.value = false;
+                return;
+            }
             if (response.data.status) {
                 scheduledTasks.value = response.data.data || [];
             } else {
