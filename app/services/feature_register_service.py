@@ -200,15 +200,14 @@ def register_uploaded_feature(file_path, name, description, customer_id, categor
         if name in db_feature_names:
             return False, f"功能名称 '{name}' 已存在"
         
-        # 3. 获取客户ID（如果提供了客户名称）
-        if meta.get("customer"):
+        # 3. 如果没有入参客户id，则从元数据中获取
+        if not customer_id and meta.get("customer"):
             customer_name = meta.get("customer")
             ok, _, customers = customer_service.get_customer_by_name(customer_name)
             if ok and customers:
                 customer_id = customers[0].get("id", 0)
             else:
                 logger.warning(f"未找到客户: {customer_name}，将使用传入的customer_id={customer_id}")
-        
         # 4. 获取文件名
         filename = os.path.basename(file_path)
         if os.path.isdir(file_path):
