@@ -18,7 +18,7 @@ const category_api = {
   
   // 删除分类（管理员）
   del_category(category_id) {
-    return api.client.post('/cate/del_category', { id: category_id });
+    return api.client.post('/cate/del_category',  category_id);
   },
   
   // 更新分类（管理员）

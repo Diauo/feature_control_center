@@ -110,7 +110,9 @@ export function useCategories(currentUser, currentCustomer, addNotification, ope
     // 删除分类
     const delCategory = async (params) => {
         const requestBody = { id: params.id };
-        
+        if(params.id === 0){
+            return;
+        }
         try {
             const response = await api.category.del_category(requestBody);
             
