@@ -240,6 +240,9 @@ createApp({
             await loadScheduledTasks();
         };
 
+        // 页面准备状态
+        const isPageReady = ref(false);
+
         // 初始化
         onMounted(async () => {
             // 检查认证状态
@@ -287,6 +290,18 @@ createApp({
             
             // 加载功能列表用于配置筛选
             await loadFeaturesByCustomer();
+            
+            // 所有数据加载完成，标记页面已准备
+            isPageReady.value = true;
+            
+            // 延迟隐藏加载屏幕，让用户看到完整的开幕动画
+            await nextTick();
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                }, 100);
+            }
         });
 
         // 格式化时间显示
@@ -324,6 +339,7 @@ createApp({
             // 页面状态
             currentPage,
             currentUser,
+            isPageReady,
             
             // 通知相关
             notifications,

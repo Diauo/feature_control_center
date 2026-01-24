@@ -11,7 +11,49 @@
 </head>
 
 <body>
-    <div id="app">
+    <!-- 加载屏幕 -->
+    <div id="loading-screen" class="loading-screen active">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">正在加载功能管理面板...</p>
+        </div>
+    </div>
+
+    <div id="app" v-show="isPageReady">
+        <!-- 左侧边栏 - 分类菜单 -->
+        <div class="sidebar-container">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div>分类</div>
+                    <div class="button" @click="toggleCategoryEdite()">编辑</div>
+                </div>
+                <div class="category">
+                    <div class="category-title" :class="{ 'category-selected': selectedCategory === null }"
+                        @click="handleCategoryToggle({id: null})">所有功能</div>
+                </div>
+                <div v-for="category in categories" :key="category.order_id" class="category">
+                    <!-- 顶层菜单 -->
+                    <div class="category-title"
+                        :class="{ 'category-selected': selectedCategory === category.id }">
+                        {{ category.name }}
+                        <div v-if="categorieEditMode"
+                            class="category-active-zone --category-active-zone-edit"
+                            @click="handleCategoryToggle(category)"></div>
+                        <div v-if="!categorieEditMode"
+                            class="category-active-zone --category-active-zone-normal"
+                            @click="handleCategoryToggle(category)"></div>
+                        <span v-if="categorieEditMode" class="button button--add-category"
+                            @click="openAddCategoryModal(category, $event)">📝</span>
+                    </div>
+                </div>
+                <div class="category">
+                    <div v-if="categorieEditMode" class="category-title category-title--add"
+                        @click="openAddCategoryModal(null, $event)">+ 新增分类 +</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 顶部导航栏 -->
         <nav class="nav">
             <div class="nav-container">
                 <div class="client-selector">
@@ -45,42 +87,11 @@
 
         <div class="content">
             <!-- 首页 -->
-            <div v-if="currentPage === 'home'">
+            <div v-if="currentPage === 'home'" class="home-page">
                 <div class="feature-actions" v-if="currentUser && currentUser.role === 'admin'">
                     <button class="btn-primary" @click="openRegisterFeatureModal">注册新功能</button>
                 </div>
                 <div class="features-grid">
-                    <div class="sidebar-container">
-                        <div class="sidebar">
-                            <div class="sidebar-header">
-                                <div>分类</div>
-                                <div class="button" @click="toggleCategoryEdite()">编辑</div>
-                            </div>
-                            <div class="category">
-                                <div class="category-title" :class="{ 'category-selected': selectedCategory === null }"
-                                    @click="handleCategoryToggle({id: null})">所有功能</div>
-                            </div>
-                            <div v-for="category in categories" :key="category.order_id" class="category">
-                                <!-- 顶层菜单 -->
-                                <div class="category-title"
-                                    :class="{ 'category-selected': selectedCategory === category.id }">
-                                    {{ category.name }}
-                                    <div v-if="categorieEditMode"
-                                        class="category-active-zone --category-active-zone-edit"
-                                        @click="handleCategoryToggle(category)"></div>
-                                    <div v-if="!categorieEditMode"
-                                        class="category-active-zone --category-active-zone-normal"
-                                        @click="handleCategoryToggle(category)"></div>
-                                    <span v-if="categorieEditMode" class="button button--add-category"
-                                        @click="openAddCategoryModal(category, $event)">📝</span>
-                                </div>
-                            </div>
-                            <div class="category">
-                                <div v-if="categorieEditMode" class="category-title category-title--add"
-                                    @click="openAddCategoryModal(null, $event)">+ 新增分类 +</div>
-                            </div>
-                        </div>
-                    </div>
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
                         @click="openFeatureWindow(feature)">
                         <h3>{{ feature.name }}</h3>

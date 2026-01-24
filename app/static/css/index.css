@@ -156,26 +156,43 @@ body {
 }
 
 .sidebar-container {
-    width: 16%;
-    height: 100%;
+    width: 250px;
+    height: calc(100vh - 68px);
     overflow: hidden;
-    /* 隐藏滚动条 */
     position: fixed;
     left: 0;
     top: 68px;
     bottom: 0;
+    z-index: 50;
+    background: #2c3e50;
 }
 
 .sidebar {
-    width: calc(100% + 20px);
-    /* 增加宽度以覆盖滚动条 */
+    width: 100%;
     height: 100%;
     background: #2c3e50;
     color: white;
     padding: 1rem;
-    overflow-y: scroll;
-    padding-right: 20px;
-    /* 避免内容被滚动条遮挡 */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Scrollbar 美化 */
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .sidebar-header {
@@ -270,17 +287,34 @@ body {
 }
 
 .content {
-    padding: 2rem;
     margin-left: 250px;
-    margin-top: 60px;
-    max-width: calc(100% - 250px);
+    margin-top: 68px;
+    padding: 2rem;
+    min-height: calc(100vh - 68px);
+    background-color: #f5f5f5;
+    overflow-y: auto;
+}
+
+.home-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.feature-actions {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1.5rem;
-    margin-top: 2rem;
+    width: 100%;
 }
 
 .feature-card {
@@ -289,18 +323,37 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: all 0.3s ease;
     text-align: center;
-    aspect-ratio: 1;
+    min-height: 200px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    border: 2px solid transparent;
+}
+
+.feature-card h3 {
+    margin: 0.5rem 0;
+    font-size: 1rem;
+    color: #333;
+    word-break: break-word;
+}
+
+.feature-card p {
+    margin: 0.5rem 0;
+    font-size: 0.875rem;
+    color: #666;
+    word-break: break-word;
+    max-height: 4rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-8px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
 }
 
 .notifications-container {
@@ -1011,8 +1064,54 @@ button:hover {
     word-break: break-all;
 }
 
+/* ========================== 页面容器统一样式 ========================== */
+
 /* 定时任务页面样式 */
 .scheduled-tasks-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.log-query-form {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.logs-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#config-management {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.config-filter-form {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.config-actions {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.config-list {
     background: white;
     border-radius: 8px;
     padding: 1.5rem;
@@ -1137,4 +1236,139 @@ button:hover {
 
 .scheduled-tasks-table td div[title]:hover {
     background-color: #f0f0f0;
+}
+
+/* ========================== 加载屏幕样式 ========================== */
+
+/* 加载屏幕容器 */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 加载屏幕隐藏状态 */
+.loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* 加载内容 */
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    animation: slideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 加载动画 - 旋转微粒 */
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+/* 加载文本 */
+.loading-text {
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* 动画1: 旋转 */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* 动画2: 脉冲 */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.7;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+/* 动画3: 上升 */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 舞台剧开幕动画 - 左右幕布从中间拉开 */
+@keyframes curtainOpen {
+    0% {
+        clip-path: inset(0 50% 0 50%);
+    }
+    100% {
+        clip-path: inset(0 0 0 0);
+    }
+}
+
+/* 应用主容器开幕动画 */
+#app {
+    animation: fadeIn 0.8s ease-out 0.1s both;
+}
+
+/* 当 app 完全加载后的淡入动画 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* 导航栏开场动画 */
+.nav {
+    animation: slideDown 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+}
+
+/* 内容区开场动画 */
+.content {
+    animation: slideUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+}
+
+/* 动画4: 下滑 */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
