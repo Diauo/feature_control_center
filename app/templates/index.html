@@ -173,82 +173,7 @@
                         </table>
                     </div>
 
-                    <!-- 新增/编辑定时任务模态框 -->
-                    <div class="modal-overlay" v-bind:class="{ active: scheduledTaskModal.show }"
-                        @click="closeScheduledTaskModal"></div>
-                    <div class="modal modal-center scheduled-task-modal"
-                        v-bind:class="{ active: scheduledTaskModal.show }">
-                        <div class="modal-content">
-                            <h3>{{ scheduledTaskModal.mode === 'edit' ? '编辑定时任务' : '新增定时任务' }}</h3>
-                            <form @submit.prevent="saveScheduledTask">
-                                <div class="form-group">
-                                    <label>任务名称:</label>
-                                    <input type="text" v-model="scheduledTaskModal.formData.name" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>关联功能:</label>
-                                    <select v-model="scheduledTaskModal.formData.feature_id" required>
-                                        <option value="">请选择功能</option>
-                                        <option v-for="feature in features" :key="feature.id" :value="feature.id">
-                                            {{ feature.name }}
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>执行方式:</label>
-                                    <select v-model="scheduledTaskModal.formData.scheduleType">
-                                        <option value="interval">按间隔执行</option>
-                                        <option value="daily">每天指定时间</option>
-                                        <option value="cron">Cron表达式（高级）</option>
-                                    </select>
-                                </div>
-
-                                <!-- 按间隔执行 -->
-                                <div v-if="scheduledTaskModal.formData.scheduleType === 'interval'" class="form-group">
-                                    <label>间隔时间:</label>
-                                    <div class="interval-inputs">
-                                        <input type="number" v-model="scheduledTaskModal.formData.intervalValue" min="1"
-                                            required>
-                                        <select v-model="scheduledTaskModal.formData.intervalUnit">
-                                            <option value="minutes">分钟</option>
-                                            <option value="hours">小时</option>
-                                            <option value="days">天</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- 每天指定时间执行 -->
-                                <div v-if="scheduledTaskModal.formData.scheduleType === 'daily'" class="form-group">
-                                    <label>执行时间:</label>
-                                    <input type="time" v-model="scheduledTaskModal.formData.dailyTime" required>
-                                </div>
-
-                                <!-- Cron表达式 -->
-                                <div v-if="scheduledTaskModal.formData.scheduleType === 'cron'" class="form-group">
-                                    <label>Cron表达式:</label>
-                                    <input type="text" v-model="scheduledTaskModal.formData.cron_expression"
-                                        placeholder="例如: 0 0 * * *">
-                                    <div class="form-help">Cron表达式格式: 分 时 日 月 周</div>
-                                </div>
-                                <div class="form-group">
-                                    <label>任务描述:</label>
-                                    <textarea v-model="scheduledTaskModal.formData.description"></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label>状态:</label>
-                                    <select v-model="scheduledTaskModal.formData.is_active">
-                                        <option :value="true">启用</option>
-                                        <option :value="false">禁用</option>
-                                    </select>
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="btn-primary">保存</button>
-                                    <button type="button" class="btn-secondary"
-                                        @click="closeScheduledTaskModal">取消</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+                    <!-- 新增/编辑定时任务模态框已移至 body 下的 modal-root -->
                 </div>
             </div>
 
@@ -339,33 +264,7 @@
                         </tbody>
                     </table>
 
-                    <!-- 日志明细模态框 -->
-                    <div class="modal-overlay" v-bind:class="{ active: logDetailList.length > 0 }"
-                        @click="logDetailList = []"></div>
-                    <div class="modal modal-center modal-log-detail"
-                        v-bind:class="{ active: logDetailList.length > 0 }">
-                        <div class="modal-content">
-                            <h3>日志明细</h3>
-                            <!-- 筛选条件 -->
-                            <div class="log-detail-filter">
-                                <input type="text" v-model="logDetailFilter" placeholder="正则表达式筛选">
-                                <button class="btn-primary" @click="filterLogDetails">筛选</button>
-                                <button class="btn-secondary" @click="clearLogDetailFilter">清除</button>
-                            </div>
-                            <!-- 日志明细列表 -->
-                            <div class="log-detail-list">
-                                <div v-for="detail in filteredLogDetails" :key="detail.id" class="log-detail-item">
-                                    <span class="log-timestamp">[{{ detail.timestamp }}]</span>
-                                    <span :class="['log-level', 'log-level-' + detail.level.toLowerCase()]">{{
-                                        detail.level }}</span>
-                                    <span class="log-message">{{ detail.message }}</span>
-                                </div>
-                            </div>
-                            <div class="modal-actions">
-                                <button class="btn-primary" @click="logDetailList = []">关闭</button>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- 日志明细模态框已移至 body 下的 modal-root -->
                 </div>
             </div>
 
@@ -444,36 +343,7 @@
                         </table>
                     </div>
 
-                    <!-- 新增/编辑配置模态框 -->
-                    <div class="modal-overlay" v-bind:class="{ active: configModal.show }" @click="closeConfigModal">
-                    </div>
-                    <div class="modal modal-center" v-bind:class="{ active: configModal.show }">
-                        <div class="modal-content">
-                            <h3>{{ configModal.mode === 'edit' ? '编辑配置' : '新增配置' }}</h3>
-                            <form @submit.prevent="saveConfig">
-                                <div class="form-group">
-                                    <label>名称:</label>
-                                    <input type="text" v-model="configModal.formData.name" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>值:</label>
-                                    <input type="text" v-model="configModal.formData.value">
-                                </div>
-                                <div class="form-group">
-                                    <label>默认值:</label>
-                                    <input type="text" v-model="configModal.formData.default_value">
-                                </div>
-                                <div class="form-group">
-                                    <label>描述:</label>
-                                    <textarea v-model="configModal.formData.description"></textarea>
-                                </div>
-                                <div class="form-actions">
-                                    <button type="submit" class="btn-primary">保存</button>
-                                    <button type="button" class="btn-secondary" @click="closeConfigModal">取消</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+                    <!-- 新增/编辑配置模态框已移至 body 下的 modal-root -->
 
                 </div>
             </div>
@@ -513,83 +383,237 @@
             </transition-group>
         </div>
 
-        <div class="modal-overlay" v-bind:class="{ active: modal.show }" @click="closeModal()"></div>
-        <div class="modal" ref="modalWindow" v-bind:class="{ active: modal.show }" :style="{
-            top: modal.top + 'px',
-            left: modal.left + 'px'
-          }">
-            <h1>{{ modal.title }}</h1>
-            <hr class="modal-line">
-            <h4 v-html="modal.description"></h4>
-            <hr class="modal-line">
-            <!-- 动态渲染输入框 -->
-            <div v-for="(field, index) in modal.fields" :key="index">
-                <label :id="'modal-label-'+index" class="modal-label">{{ field.label }}:</label>
-                <input :id="'modal-input-'+index" class="modal-input" v-if="field.type === 'text'" type="text"
-                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label">
-                <textarea :id="'modal-textarea-'+index" class="modal-input" v-else-if="field.type === 'textarea'"
-                    v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label"></textarea>
-                <select :id="'modal-select-'+index" class="modal-input" v-else-if="field.type === 'select'">
-                    <option v-for="(option, i) in field.options" :key="i" :value="option">{{ option }}</option>
-                </select>
-            </div>
-            <hr class="modal-line">
-            <div style="display: flex;">
-                <div v-for="(button, index) in modal.buttons" :key="index">
-                    <button :id="'modal-button-'+index" :class="button.style" @click="button.function(button.param)">
-                        {{ button.label }} </button>
+        <!-- 所有模态框都在 #modal-root 中，以下为模态框的 Vue 模板定义 -->
+        <!-- 使用 Vue 组件的 teleport 到 modal-root 下 -->
+        
+        <!-- 通用模态框 -->
+        <teleport to="#modal-root">
+            <template v-if="modal.show">
+                <div class="modal-overlay active" @click="closeModal()"></div>
+                <div class="modal modal-center active" ref="modalWindow">
+                    <h1>{{ modal.title }}</h1>
+                    <hr class="modal-line">
+                    <h4 v-html="modal.description"></h4>
+                    <hr class="modal-line">
+                    <!-- 动态渲染输入框 -->
+                    <div v-for="(field, index) in modal.fields" :key="index">
+                        <label :id="'modal-label-'+index" class="modal-label">{{ field.label }}:</label>
+                        <input :id="'modal-input-'+index" class="modal-input" v-if="field.type === 'text'" type="text"
+                            v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label">
+                        <textarea :id="'modal-textarea-'+index" class="modal-input" v-else-if="field.type === 'textarea'"
+                            v-model="modal.modalParams[field.key]" :placeholder="'请输入' + field.label"></textarea>
+                        <select :id="'modal-select-'+index" class="modal-input" v-else-if="field.type === 'select'">
+                            <option v-for="(option, i) in field.options" :key="i" :value="option">{{ option }}</option>
+                        </select>
+                    </div>
+                    <hr class="modal-line">
+                    <div style="display: flex;">
+                        <div v-for="(button, index) in modal.buttons" :key="index">
+                            <button :id="'modal-button-'+index" :class="button.style" @click="button.function(button.param)">
+                                {{ button.label }} </button>
+                        </div>
+                        <button id="modal-button-cancel" class="btn-cancel" @click="closeModal">取消</button>
+                    </div>
                 </div>
-                <button id="modal-button-cancel" class="btn-cancel" @click="closeModal">取消</button>
-            </div>
-        </div>
+            </template>
+        </teleport>
 
         <!-- 功能注册模态框 -->
-        <div class="modal-overlay" v-bind:class="{ active: registerFeatureModal.show }"
-            @click="closeRegisterFeatureModal"></div>
-        <div class="modal modal-center" v-bind:class="{ active: registerFeatureModal.show }">
-            <div class="modal-content">
-                <h3>注册新功能</h3>
-                <form @submit.prevent="registerFeature">
-                    <div class="form-group">
-                        <label>功能脚本文件:</label>
-                        <input type="file" @change="handleFileUpload" accept=".py,.zip" required>
-                    </div>
+        <teleport to="#modal-root">
+            <template v-if="registerFeatureModal.show">
+                <div class="modal-overlay active" @click="closeRegisterFeatureModal"></div>
+                <div class="modal modal-center active">
+                    <div class="modal-content">
+                        <h3>注册新功能</h3>
+                        <form @submit.prevent="registerFeature">
+                            <div class="form-group">
+                                <label>功能脚本文件:</label>
+                                <input type="file" @change="handleFileUpload" accept=".py,.zip" required>
+                            </div>
 
-                    <div class="form-group">
-                        <label>功能名称（为空使用脚本内置信息）:</label>
-                        <input type="text" v-model="registerFeatureModal.name">
-                    </div>
-                    <div class="form-group">
-                        <label>功能描述（为空使用脚本内置信息）:</label>
-                        <textarea v-model="registerFeatureModal.description"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>所属客户:</label>
-                        <select v-model="registerFeatureModal.customer_id" required>
-                            <option value="">请选择客户</option>
-                            <option v-for="customer in customers" :key="customer.id" :value="customer.id">
-                                {{ customer.name }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>所属分类:</label>
-                        <select v-model="registerFeatureModal.category_id">
-                            <option value="0">无分类</option>
-                            <option v-for="category in categories" :key="category.id" :value="category.id">
-                                {{ category.name }}
-                            </option>
-                        </select>
-                    </div>
+                            <div class="form-group">
+                                <label>功能名称（为空使用脚本内置信息）:</label>
+                                <input type="text" v-model="registerFeatureModal.name">
+                            </div>
+                            <div class="form-group">
+                                <label>功能描述（为空使用脚本内置信息）:</label>
+                                <textarea v-model="registerFeatureModal.description"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>所属客户:</label>
+                                <select v-model="registerFeatureModal.customer_id" required>
+                                    <option value="">请选择客户</option>
+                                    <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+                                        {{ customer.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>所属分类:</label>
+                                <select v-model="registerFeatureModal.category_id">
+                                    <option value="0">无分类</option>
+                                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                                        {{ category.name }}
+                                    </option>
+                                </select>
+                            </div>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary" :disabled="!registerFeatureModal.file">注册</button>
-                        <button type="button" class="btn-secondary" @click="closeRegisterFeatureModal">取消</button>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary" :disabled="!registerFeatureModal.file">注册</button>
+                                <button type="button" class="btn-secondary" @click="closeRegisterFeatureModal">取消</button>
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </div>
-        </div>
+                </div>
+            </template>
+        </teleport>
+
+        <!-- 系统配置模态框 -->
+        <teleport to="#modal-root">
+            <template v-if="configModal.show">
+                <div class="modal-overlay active" @click="closeConfigModal"></div>
+                <div class="modal modal-center active">
+                    <div class="modal-content">
+                        <h3>{{ configModal.mode === 'edit' ? '编辑配置' : '新增配置' }}</h3>
+                        <form @submit.prevent="saveConfig">
+                            <div class="form-group">
+                                <label>名称:</label>
+                                <input type="text" v-model="configModal.formData.name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>值:</label>
+                                <input type="text" v-model="configModal.formData.value">
+                            </div>
+                            <div class="form-group">
+                                <label>默认值:</label>
+                                <input type="text" v-model="configModal.formData.default_value">
+                            </div>
+                            <div class="form-group">
+                                <label>描述:</label>
+                                <textarea v-model="configModal.formData.description"></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">保存</button>
+                                <button type="button" class="btn-secondary" @click="closeConfigModal">取消</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </template>
+        </teleport>
+
+        <!-- 定时任务模态框 -->
+        <teleport to="#modal-root">
+            <template v-if="scheduledTaskModal.show">
+                <div class="modal-overlay active" @click="closeScheduledTaskModal"></div>
+                <div class="modal modal-center scheduled-task-modal active">
+                    <div class="modal-content">
+                        <h3>{{ scheduledTaskModal.mode === 'edit' ? '编辑定时任务' : '新增定时任务' }}</h3>
+                        <form @submit.prevent="saveScheduledTask">
+                            <div class="form-group">
+                                <label>任务名称:</label>
+                                <input type="text" v-model="scheduledTaskModal.formData.name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>关联功能:</label>
+                                <select v-model="scheduledTaskModal.formData.feature_id" required>
+                                    <option value="">请选择功能</option>
+                                    <option v-for="feature in features" :key="feature.id" :value="feature.id">
+                                        {{ feature.name }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>执行方式:</label>
+                                <select v-model="scheduledTaskModal.formData.scheduleType">
+                                    <option value="interval">按间隔执行</option>
+                                    <option value="daily">每天指定时间</option>
+                                    <option value="cron">Cron表达式（高级）</option>
+                                </select>
+                            </div>
+
+                            <!-- 按间隔执行 -->
+                            <div v-if="scheduledTaskModal.formData.scheduleType === 'interval'" class="form-group">
+                                <label>间隔时间:</label>
+                                <div class="interval-inputs">
+                                    <input type="number" v-model="scheduledTaskModal.formData.intervalValue" min="1"
+                                        required>
+                                    <select v-model="scheduledTaskModal.formData.intervalUnit">
+                                        <option value="minutes">分钟</option>
+                                        <option value="hours">小时</option>
+                                        <option value="days">天</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- 每天指定时间执行 -->
+                            <div v-if="scheduledTaskModal.formData.scheduleType === 'daily'" class="form-group">
+                                <label>执行时间:</label>
+                                <input type="time" v-model="scheduledTaskModal.formData.dailyTime" required>
+                            </div>
+
+                            <!-- Cron表达式 -->
+                            <div v-if="scheduledTaskModal.formData.scheduleType === 'cron'" class="form-group">
+                                <label>Cron表达式:</label>
+                                <input type="text" v-model="scheduledTaskModal.formData.cron_expression"
+                                    placeholder="例如: 0 0 * * *">
+                                <div class="form-help">Cron表达式格式: 分 时 日 月 周</div>
+                            </div>
+                            <div class="form-group">
+                                <label>任务描述:</label>
+                                <textarea v-model="scheduledTaskModal.formData.description"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>状态:</label>
+                                <select v-model="scheduledTaskModal.formData.is_active">
+                                    <option :value="true">启用</option>
+                                    <option :value="false">禁用</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">保存</button>
+                                <button type="button" class="btn-secondary"
+                                    @click="closeScheduledTaskModal">取消</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </template>
+        </teleport>
+
+        <!-- 日志详情模态框 -->
+        <teleport to="#modal-root">
+            <template v-if="logDetailList.length > 0">
+                <div class="modal-overlay active" @click="logDetailList = []"></div>
+                <div class="modal modal-center modal-log-detail active">
+                    <div class="modal-content">
+                        <h3>日志明细</h3>
+                        <!-- 筛选条件 -->
+                        <div class="log-detail-filter">
+                            <input type="text" v-model="logDetailFilter" placeholder="正则表达式筛选">
+                            <button class="btn-primary" @click="filterLogDetails">筛选</button>
+                            <button class="btn-secondary" @click="clearLogDetailFilter">清除</button>
+                        </div>
+                        <!-- 日志明细列表 -->
+                        <div class="log-detail-list">
+                            <div v-for="detail in filteredLogDetails" :key="detail.id" class="log-detail-item">
+                                <span class="log-timestamp">[{{ detail.timestamp }}]</span>
+                                <span :class="['log-level', 'log-level-' + detail.level.toLowerCase()]">{{
+                                    detail.level }}</span>
+                                <span class="log-message">{{ detail.message }}</span>
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn-primary" @click="logDetailList = []">关闭</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </teleport>
     </div>
+    <!-- Modal Root - 所有模态框的挂载点 -->
+    <div id="modal-root"></div>
+
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <script type="module" src="[| url_for('static', filename='js/index.js') |]"></script>
 </body>

@@ -710,6 +710,19 @@ button:hover {
     color: #333;
 }
 
+/* ========== 模态框核心样式 ========== */
+/* 模态框容器 - 固定定位于 body 下 */
+#modal-root {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+}
+
+#modal-root > * {
+    pointer-events: auto;
+}
+
 .modal {
     position: fixed;
     background: white;
@@ -718,27 +731,28 @@ button:hover {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
     border-radius: 12px;
     display: none;
-    z-index: 2000;
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
-    max-height: 90vh;
+    z-index: 10000;
+    transition: box-shadow 0.3s ease;
+    max-height: min(80vh, 100%);
     overflow-y: auto;
 }
 
 /* 居中模态框样式 */
 .modal-center {
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    min-width: 400px;
-    max-width: 80%;
-    max-height: 80vh;
+    min-width: 450px;
+    max-width: min(900px, 90%);
+    max-height: min(85vh, 100%);
     overflow-y: auto;
 }
 
 /* 日志明细模态框样式 */
 .modal-log-detail {
-    width: 80vw;
-    height: 85vh;
+    width: min(90vw, 1000px);
+    height: min(85vh, 100%);
     max-width: none;
     max-height: none;
 }
@@ -772,18 +786,15 @@ button:hover {
 
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
     display: none;
-    z-index: 1999;
+    z-index: 9999;
 }
 
 .modal-overlay.active {
     display: block;
-    z-index: 1999;
+    z-index: 9999;
 }
 
 /* 当 modal 打开时，禁止页面滚动 */
@@ -1134,7 +1145,7 @@ body.modal-open {
 
 /* 日志明细列表样式 */
 .log-detail-list {
-    max-height: 50vh;
+    max-height: 58vh;
     overflow-y: auto;
     background: #f5f5f5;
     padding: 1rem;

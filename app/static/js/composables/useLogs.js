@@ -53,6 +53,9 @@ export function useLogs(currentUser, currentCustomer, addNotification) {
             const response = await api.log.getLogDetails(logId);
             if (response.data.status) {
                 logDetailList.value = response.data.data || [];
+                // 打开日志详情模态框时，禁用页面滚动
+                document.body.classList.add('modal-open');
+                document.body.style.overflow = 'hidden';
             } else {
                 addNotification(response.data.message || '加载日志明细失败');
             }

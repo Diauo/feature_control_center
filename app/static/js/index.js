@@ -11,9 +11,13 @@ import { useCustomers } from './composables/useCustomers.js';
 import { useAuth } from './composables/useAuth.js';
 import { useLogs } from './composables/useLogs.js';
 import { useScheduledTasks } from './composables/useScheduledTasks.js';
+import { ensureModalRoot } from './modalInit.js';
 
 createApp({
     setup() {
+        // 确保 modal-root 容器存在
+        ensureModalRoot();
+        
         // 页面状态
         const currentPage = ref('home');
         const currentUser = ref(null);
@@ -174,6 +178,11 @@ createApp({
         // 当logDetailList变化时，更新filteredLogDetails
         watch(logDetailList, (newList) => {
             filteredLogDetails.value = newList;
+            // 当日志详情列表为空时，恢复页面滚动
+            if (newList.length === 0) {
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+            }
         });
 
         // 监听客户选择变化
