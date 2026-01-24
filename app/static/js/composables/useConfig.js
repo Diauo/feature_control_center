@@ -116,6 +116,9 @@ export function useConfig(currentUser, currentCustomer, addNotification, api) {
             feature_id: 0
         };
         configModal.value.show = true;
+        // 禁止背景页面滚动
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
     };
 
     // 打开编辑配置模态框
@@ -136,6 +139,9 @@ export function useConfig(currentUser, currentCustomer, addNotification, api) {
             feature_id: config.feature_id || 0
         };
         configModal.value.show = true;
+        // 禁止背景页面滚动
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
     };
 
     // 关闭配置模态框
@@ -148,6 +154,9 @@ export function useConfig(currentUser, currentCustomer, addNotification, api) {
             description: '',
             feature_id: 0
         };
+        // 恢复背景页面滚动
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
     };
 
     // 保存配置

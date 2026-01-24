@@ -68,6 +68,9 @@ export function useScheduledTasks(currentUser, currentCustomer, addNotification,
                 is_active: true
             }
         };
+        // 禁止背景页面滚动
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
     };
     
     // 打开编辑定时任务模态框
@@ -118,11 +121,17 @@ export function useScheduledTasks(currentUser, currentCustomer, addNotification,
                 is_active: task.is_active
             }
         };
+        // 禁止背景页面滚动
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
     };
     
     // 关闭定时任务模态框
     const closeScheduledTaskModal = () => {
         scheduledTaskModal.value.show = false;
+        // 恢复背景页面滚动
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
     };
     
     // 保存定时任务

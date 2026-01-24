@@ -21,6 +21,10 @@ export function useModal() {
         modal.value.buttons = buttons;
         modal.value.show = true;
         
+        // 禁止背景页面滚动
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
+        
         // 更新动态窗口的位置，避免超出屏幕
         nextTick(() => {
             if (modalWindow.value) {
@@ -56,6 +60,10 @@ export function useModal() {
         modal.value.modalParams = {};
         modal.value.params = {};
         modal.value.hanldFunction = undefined;
+        
+        // 恢复背景页面滚动
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
     };
 
     return {

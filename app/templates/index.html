@@ -89,7 +89,11 @@
             <!-- 首页 -->
             <div v-if="currentPage === 'home'" class="home-page">
                 <div class="feature-actions" v-if="currentUser && currentUser.role === 'admin'">
-                    <button class="btn-primary" @click="openRegisterFeatureModal">注册新功能</button>
+                    <h3 class="page-header-title">功能列表</h3>
+                    <button class="btn-primary" @click="openRegisterFeatureModal">+ 注册新功能</button>
+                </div>
+                <div v-else class="page-header">
+                    <h3 class="page-header-title">功能列表</h3>
                 </div>
                 <div class="features-grid">
                     <div v-for="feature in filteredFeatures" :key="feature.id" class="feature-card"
@@ -103,16 +107,21 @@
             <!-- 定时任务页面 -->
             <div v-if="currentPage === 'cron'">
                 <div class="scheduled-tasks-container">
-                    <!-- 筛选和操作按钮 -->
-                    <div class="scheduled-tasks-actions">
-                        <div class="scheduled-tasks-filter">
-                            <input type="text" v-model="scheduledTaskFilter" placeholder="按任务名称筛选"
-                                @input="filterScheduledTasks">
+                    <!-- 页面头部栏 -->
+                    <div class="page-header with-filter">
+                        <h3 class="page-header-title">定时任务</h3>
+                        <div class="page-header-actions">
+                            <button class="btn-primary" @click="openAddScheduledTaskModal">+ 新增定时任务</button>
+                            <button class="btn-secondary" @click="loadScheduledTasks" :disabled="scheduledTasksLoading">
+                                {{ scheduledTasksLoading ? '刷新中...' : '刷新' }}
+                            </button>
                         </div>
-                        <button class="btn-primary" @click="openAddScheduledTaskModal">新增定时任务</button>
-                        <button class="btn-secondary" @click="loadScheduledTasks" :disabled="scheduledTasksLoading">
-                            {{ scheduledTasksLoading ? '刷新中...' : '刷新' }}
-                        </button>
+                        <div class="page-header-filter">
+                            <div class="page-header-filter-group">
+                                <input type="text" v-model="scheduledTaskFilter" placeholder="按任务名称筛选"
+                                    @input="filterScheduledTasks">
+                            </div>
+                        </div>
                     </div>
 
                     <!-- 定时任务列表 -->
@@ -244,12 +253,12 @@
             </div>
 
             <!-- 日志查询页面 -->
-            <div v-if="currentPage === 'logs'">
-
-                <!-- 查询条件 -->
-                <div class="log-query-form">
-                    <div class="form-row">
-                        <div class="form-group">
+            <div v-if="currentPage === 'logs'" class="logs-page">
+                <!-- 页面头部栏 -->
+                <div class="page-header with-filter">
+                    <h3 class="page-header-title">日志查询</h3>
+                    <div class="page-header-filter">
+                        <div class="page-header-filter-group">
                             <label>功能:</label>
                             <select v-model="queryConditions.feature_id">
                                 <option value="">所有功能</option>
@@ -259,22 +268,22 @@
                             </select>
                         </div>
 
-                        <div class="form-group">
+                        <div class="page-header-filter-group">
                             <label>开始日期:</label>
                             <input type="date" v-model="queryConditions.start_date">
                         </div>
 
-                        <div class="form-group">
+                        <div class="page-header-filter-group">
                             <label>结束日期:</label>
                             <input type="date" v-model="queryConditions.end_date">
                         </div>
 
-                        <div class="form-group">
+                        <div class="page-header-filter-group">
                             <label>关键字:</label>
                             <input type="text" v-model="queryConditions.keyword" placeholder="请求ID或状态">
                         </div>
 
-                        <div class="form-group">
+                        <div class="page-header-filter-group">
                             <label>执行类型:</label>
                             <select v-model="queryConditions.execution_type">
                                 <option value="">所有类型</option>
@@ -282,13 +291,12 @@
                                 <option value="scheduled">定时任务</option>
                             </select>
                         </div>
-
-                        <div class="form-group form-actions">
-                            <button class="btn-primary" @click="loadLogs" :disabled="logsLoading">
-                                {{ logsLoading ? '查询中...' : '查询' }}
-                            </button>
-                            <button class="btn-secondary" @click="resetQueryConditions">重置</button>
-                        </div>
+                    </div>
+                    <div class="page-header-filter-actions">
+                        <button class="btn-primary" @click="loadLogs" :disabled="logsLoading">
+                            {{ logsLoading ? '查询中...' : '查询' }}
+                        </button>
+                        <button class="btn-secondary" @click="resetQueryConditions">重置</button>
                     </div>
                 </div>
 
@@ -364,11 +372,17 @@
             <!-- 系统配置页面 -->
             <div v-if="currentPage === 'config'">
                 <div id="config-management">
-                    <!-- 筛选表单 -->
-                    <div class="config-filter-form">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>关联功能:</label>
+                    <!-- 页面头部栏 -->
+                    <div class="page-header with-filter">
+                        <h3 class="page-header-title">系统配置</h3>
+                        <div class="page-header-actions" v-if="currentUser && currentUser.role === 'admin'">
+                            <button class="btn-primary" @click="openAddConfigModal">+ 新增配置</button>
+                            <button class="btn-secondary" @click="reloadConfig">重载</button>
+                            <button class="btn-warning" @click="cleanupConfig">清理</button>
+                        </div>
+                        <div class="page-header-filter">
+                            <div class="page-header-filter-group">
+                                <label>功能:</label>
                                 <select v-model="filterConditions.feature_id">
                                     <option value="">所有配置</option>
                                     <option value="0">系统配置</option>
@@ -378,33 +392,25 @@
                                 </select>
                             </div>
 
-                            <div class="form-group">
+                            <div class="page-header-filter-group">
                                 <label>功能名称:</label>
-                                <input type="text" v-model="filterConditions.feature_name" placeholder="模糊匹配功能名称">
+                                <input type="text" v-model="filterConditions.feature_name" placeholder="模糊匹配">
                             </div>
 
-                            <div class="form-group">
+                            <div class="page-header-filter-group">
                                 <label>配置名称:</label>
-                                <input type="text" v-model="filterConditions.config_name" placeholder="模糊匹配配置名称">
+                                <input type="text" v-model="filterConditions.config_name" placeholder="模糊匹配">
                             </div>
 
-                            <div class="form-group">
+                            <div class="page-header-filter-group">
                                 <label>配置描述:</label>
-                                <input type="text" v-model="filterConditions.config_description" placeholder="模糊匹配配置描述">
-                            </div>
-
-                            <div class="form-group form-actions">
-                                <button class="btn-primary" @click="loadFilteredConfigs">筛选</button>
-                                <button class="btn-secondary" @click="resetFilterConditions">重置</button>
+                                <input type="text" v-model="filterConditions.config_description" placeholder="模糊匹配">
                             </div>
                         </div>
-                    </div>
-
-                    <!-- 操作按钮区域 -->
-                    <div class="config-actions" v-if="currentUser && currentUser.role === 'admin'">
-                        <button class="btn-primary" @click="openAddConfigModal">新增配置</button>
-                        <button class="btn-secondary" @click="reloadConfig">重载配置</button>
-                        <button class="btn-warning" @click="cleanupConfig">清理无效配置</button>
+                        <div class="page-header-filter-actions">
+                            <button class="btn-primary" @click="loadFilteredConfigs">筛选</button>
+                            <button class="btn-secondary" @click="resetFilterConditions">重置</button>
+                        </div>
                     </div>
 
                     <!-- 配置列表 -->

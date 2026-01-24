@@ -203,6 +203,9 @@ export function useFeatures(currentCustomer, currentUser, addNotification, api) 
             return;
         }
         registerFeatureModal.value.show = true;
+        // 禁止背景页面滚动
+        document.body.classList.add('modal-open');
+        document.body.style.overflow = 'hidden';
     };
     
     // 关闭注册功能模态框
@@ -213,6 +216,9 @@ export function useFeatures(currentCustomer, currentUser, addNotification, api) 
         registerFeatureModal.value.customer_id = '';
         registerFeatureModal.value.category_id = 0;
         registerFeatureModal.value.file = null;
+        // 恢复背景页面滚动
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
     };
     
     // 处理文件上传
