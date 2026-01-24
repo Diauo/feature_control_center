@@ -16,7 +16,9 @@
             <div class="nav-container">
                 <div class="client-selector">
                     <select v-model="currentCustomer">
-                        <option value="">所有客户</option>
+                        <option v-if="currentUser && currentUser.role === 'admin'" value="">
+                            所有客户
+                        </option>
                         <option v-for="customer in customers" :key="customer.id" :value="customer.id">
                             {{ customer.name }}
                         </option>

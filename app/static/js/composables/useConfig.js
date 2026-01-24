@@ -30,7 +30,7 @@ export function useConfig(currentUser, currentCustomer, addNotification, api) {
             if (currentUser.value && currentUser.value.role === 'admin') {
                 // 管理员调用无鉴权接口
                 response = await api.config.get_all_config();
-            } else if (currentCustomer.value) {
+            } else if (currentCustomer.value && currentUser.value && currentUser.value.role !== 'admin') {
                 // 操作员无配置调用权限，返回空列表
                 response = {
                     data: {
