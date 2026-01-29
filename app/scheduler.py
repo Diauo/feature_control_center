@@ -104,6 +104,15 @@ class TaskScheduler:
                 self.scheduler.remove_job(job_id)
                 del self.job_mapping[task_id]
                 logger.info(f"已移除定时任务 ID: {task_id}")
+            else:
+                # 尝试移除可能存在但不在映射中的任务
+                job_id = f"scheduled_task_{task_id}"
+                try:
+                    self.scheduler.remove_job(job_id)
+                    logger.info(f"已移除定时任务 ID: {task_id} (从调度器直接移除)")
+                except:
+                    # 任务不存在，这是正常的
+                    pass
         except Exception as e:
             logger.error(f"移除定时任务失败: {e}")
             
@@ -119,11 +128,12 @@ class TaskScheduler:
             
     def _update_job_internal(self, task):
         """内部方法：更新调度器中的定时任务"""
-        # 先移除旧任务
-        self.remove_job(task['id'])
+        # 先移除旧任务（直接调用内部方法，避免上下文混乱）
+        self._remove_job_internal(task['id'])
         # 如果任务是启用的，再添加新任务
         if task.get('is_active', False):
-            self.add_job(task)
+            self._add_job_internal(task)
+            logger.info(f"定时任务已重新激活: {task['id']}")
         else:
             # 如果任务被禁用，更新其下次执行时间为None
             from app.models.base_models import ScheduledTask
@@ -132,6 +142,7 @@ class TaskScheduler:
             if scheduled_task:
                 scheduled_task.next_run_time = None
                 db.session.commit()
+            logger.info(f"定时任务已禁用: {task['id']}")
         
     def execute_scheduled_task(self, task_id, feature_id):
         """执行定时任务"""
