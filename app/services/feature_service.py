@@ -229,7 +229,9 @@ def execute_feature(feature_id, client_id, execution_type="manual"):
                     ctx.log(f"{feature.get('name', '未知功能')} 功能脚本缺少 run() 方法，不符合规范", "error", False)
                     ctx.error(f"{feature.get('name', '未知功能')} 功能脚本缺少 run() 方法，不符合规范")
                     return
-                config = config_service.get_config_by_feature_id(feature_id)
+                # 配置按客户隔离：读取该功能所属客户的配置
+                customer_id = feature.get('customer_id')
+                config = config_service.get_config_by_feature_id(feature_id, customer_id)
                 config_dict = {
                         c['name']: c['value'] if c.get('value') not in [None, ''] else c.get('default_value')
                         for c in config[2]
