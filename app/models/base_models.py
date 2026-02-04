@@ -86,12 +86,14 @@ class Config(Base_model):
     __info__ = ''' 配置
         用于管理系统和功能附加的配置项。
         feature_id: 关联的功能id，0表示系统固定配置
+        customer_id: 配置归属客户（0 表示系统/全局）
     '''
     name = db.Column(db.String(64), unique=False, nullable=False)
     value = db.Column(db.String(256), unique=False, nullable=True)
     default_value = db.Column(db.String(256), unique=False, nullable=True)
     description = db.Column(db.String(256), unique=False, nullable=True)
     feature_id = db.Column(db.Integer, unique=False, nullable=False, default=0)
+    customer_id = db.Column(db.Integer, unique=False, nullable=False, default=0)
     feature_name = ""
 
 

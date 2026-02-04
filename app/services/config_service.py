@@ -1,6 +1,20 @@
 from app import db
 from sqlalchemy import text
 from app.models.base_models import Config, Feature
+
+
+def _resolve_customer_id_for_feature(feature_id: int) -> int:
+    """Resolve customer_id for a given feature.
+
+    - feature_id == 0 => system/global config (customer_id = 0)
+    - otherwise => take from base_feature.customer_id
+    """
+    if int(feature_id) == 0:
+        return 0
+    feature = Feature.query.get(int(feature_id))
+    if not feature:
+        raise ValueError(f"未找到ID为[{feature_id}]的功能")
+    return int(feature.customer_id)
 from app.util.serviceUtil import model_to_dict
 import logging
 
@@ -71,17 +85,27 @@ def get_config_by_id(config_id):
         logging.error(f"获取配置失败: {str(e)}")
         return False, f"获取配置失败: {str(e)}", []
 
-def get_config_by_feature_id(feature_id):
+def get_config_by_feature_id(feature_id, customer_id=None):
+    """按功能获取配置。
+
+    当 customer_id 提供时，返回该客户在该功能下的配置，实现客户隔离。
+    """
     if feature_id is None:
         return False, "feature_id为空", []
     try:
-        sql = text('''
+        sql = '''
             SELECT c.*, f.name as feature_name
             FROM base_config c
             LEFT JOIN base_feature f ON c.feature_id = f.id
             WHERE c.feature_id = :feature_id
-        ''')
-        result = db.session.execute(sql, {'feature_id': feature_id}).fetchall()
+        '''
+        params = {'feature_id': feature_id}
+
+        if customer_id is not None:
+            sql += ' AND c.customer_id = :customer_id'
+            params['customer_id'] = int(customer_id)
+
+        result = db.session.execute(text(sql), params).fetchall()
         return True, "成功", model_to_dict(result, Config)
     except Exception as e:
         logging.error(f"获取配置失败: {str(e)}")
@@ -89,6 +113,9 @@ def get_config_by_feature_id(feature_id):
 
 def add_config(config):
     try:
+        # 客户隔离：根据 feature_id 绑定 customer_id
+        config.customer_id = _resolve_customer_id_for_feature(config.feature_id)
+
         db.session.add(config)
         db.session.commit()
         logging.info(f"成功添加配置: {config.name}")
@@ -103,8 +130,18 @@ def update_config(config_id, update_dict):
         config = Config.query.get(config_id)
         if not config:
             return False, "未找到配置", None
+
+        # 不允许前端直接改 customer_id，强制由 feature_id 推导
+        if 'customer_id' in update_dict:
+            update_dict = dict(update_dict)
+            update_dict.pop('customer_id', None)
+
         for k, v in update_dict.items():
             setattr(config, k, v)
+
+        # 客户隔离：若 feature_id 变更或历史数据缺失 customer_id，则重新绑定
+        config.customer_id = _resolve_customer_id_for_feature(config.feature_id)
+
         db.session.commit()
         logging.info(f"成功更新配置: {config.name}")
         return True, "更新成功", config.to_dict()
