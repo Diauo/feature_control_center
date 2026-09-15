@@ -1,0 +1,28 @@
+name: feature-control-center
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: feature-control-center:2.1.2
+    container_name: feature-control-center
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - KILL
+      - SETGID
+      - SETUID
+    init: true
+    pids_limit: 256
+    stop_grace_period: 35s

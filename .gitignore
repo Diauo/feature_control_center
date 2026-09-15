@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+*.egg-info/
+*update-signing-private*.pem
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+backend/app/web/static/
+*.tsbuildinfo
+dist/
+delivery-assets/
+
+# Runtime data
+data/*
+!data/.gitkeep
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
