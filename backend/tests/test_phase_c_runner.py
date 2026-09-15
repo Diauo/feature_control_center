@@ -4,7 +4,6 @@ import io
 import json
 import time
 import zipfile
-from pathlib import Path
 
 from openpyxl import load_workbook
 from sqlalchemy import select
@@ -410,9 +409,39 @@ def run(ctx):
     worker.shutdown()
 
 
-def test_original_legacy_module_contract_remains_executable(client, app, tmp_path):
-    # The repository sample is copied into a ZIP exactly as a user would register it.
-    source_dir = Path(__file__).parents[2] / "features" / "example_module"
+def test_legacy_module_contract_remains_executable(client, app, tmp_path):
+    # 遗留式模块（多文件 + 旧式 run(configs, ctx) 入口）现场构造并打包，注册方式与用户上传一致。
+    # 原用例读取仓库内遗留样本；样本已移出仓库（仅内网保存），改用内置夹具。
+    source_dir = tmp_path / "legacy_module"
+    source_dir.mkdir()
+    (source_dir / "__init__.py").write_text(
+        "__meta__ = {\n"
+        '    "name": "遗留模块样例",\n'
+        '    "description": "演示旧式入口与多文件模块注册执行。",\n'
+        '    "customer": "默认客户",\n'
+        '    "configs": {\n'
+        '        "greeting": ("Hello", "问候语"),\n'
+        '        "target": ("World", "目标"),\n'
+        "    },\n"
+        "}\n"
+        "\n"
+        "from . import helper\n"
+        "\n"
+        "\n"
+        "def run(configs, ctx):\n"
+        '    ctx.log("开始执行示例模块")\n'
+        "    message = helper.create_greeting(\n"
+        '        configs.get("greeting", "Hello"), configs.get("target", "World")\n'
+        "    )\n"
+        '    ctx.log(f"生成的消息: {message}")\n'
+        '    return True, "执行成功", {"message": message}\n',
+        encoding="utf-8",
+    )
+    (source_dir / "helper.py").write_text(
+        "def create_greeting(greeting, target):\n"
+        '    return f"{greeting}, {target}!"\n',
+        encoding="utf-8",
+    )
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in source_dir.rglob("*.py"):

@@ -3,7 +3,6 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from pathlib import Path
 
 import pytest
 from sqlalchemy import select
@@ -110,14 +109,11 @@ def test_report_metadata_is_normalized_and_rejects_secret_fields():
         )
 
 
-def test_existing_ozon_package_is_accepted_without_execution():
-    source = Path(__file__).parents[2] / "features" / "ozon.zip"
-    inspected = FeaturePackageInspector().inspect(
-        source.name,
-        source.read_bytes(),
-        PackageLimits(60_000_000, 1_000, 60_000_000, 220_000_000, 200),
-    )
-    assert inspected.metadata.name
+def test_existing_package_is_accepted_without_execution():
+    # 存量式功能（带 xlsx 默认数据源）只做静态接收、不执行包内代码。
+    # 原用例读取仓库内的客户包样本；客户业务包已移出仓库（仅内网保存），改用内置夹具。
+    inspected = FeaturePackageInspector().inspect("existing.zip", feature_zip("存量示例功能"), LIMITS)
+    assert inspected.metadata.name == "存量示例功能"
     assert inspected.default_data_source is not None
     assert inspected.default_data_source.filename.lower().endswith(".xlsx")
 

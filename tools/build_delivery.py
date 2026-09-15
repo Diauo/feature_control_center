@@ -12,7 +12,9 @@ from pathlib import Path, PurePosixPath
 
 
 ROOT = Path(__file__).resolve().parents[1]
-COPY_DIRECTORIES = ("backend", "frontend", "docs", "deployment", "examples", "features", "tools")
+# 客户业务素材（旧包、客户源码、兼容示例等）：仅内网保存，.gitignore 已排除，不随仓库分发。
+CLIENT_ASSETS = ROOT / "delivery-assets"
+COPY_DIRECTORIES = ("backend", "frontend", "docs", "deployment", "examples", "tools")
 COPY_ROOT_FILES = (
     ".dockerignore",
     ".gitignore",
@@ -215,9 +217,21 @@ def build(output: Path | None, image_dir: Path, wheel_dir: Path) -> Path:
         shutil.copy2(ROOT / "docs" / "delivery" / "00-交付包说明.md", source_readme)
         history = staging / "docs" / "development-history"
         copy_tree(ROOT / ".md", history)
+        client_features = CLIENT_ASSETS / "features"
+        if not client_features.is_dir():
+            raise RuntimeError(
+                "客户端兼容示例缺失：delivery-assets/features（业务素材仅保留内网，不随仓库分发）"
+            )
+        copy_tree(client_features, staging / "features")
+
         reference = staging / "reference"
         reference.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / "ozon_Inventory.zip", reference / "ozon_Inventory.original.zip")
+        client_original = CLIENT_ASSETS / "ozon_Inventory.zip"
+        if not client_original.is_file():
+            raise RuntimeError(
+                "客户端原始包缺失：delivery-assets/ozon_Inventory.zip（业务素材仅保留内网，不随仓库分发）"
+            )
+        shutil.copy2(client_original, reference / "ozon_Inventory.original.zip")
 
         package_dir = staging / "feature-packages"
         write_feature_archive(
@@ -232,7 +246,12 @@ def build(output: Path | None, image_dir: Path, wheel_dir: Path) -> Path:
             ROOT / "examples" / "feature-packages" / "log_stream_test",
             package_dir / f"实时日志稳定性测试-{version}.zip",
         )
-        ozon_source = ROOT / "examples" / "feature-packages" / "ozon_inventory"
+        ozon_source = CLIENT_ASSETS / "ozon_inventory"
+        if not ozon_source.is_dir():
+            raise RuntimeError(
+                "客户端 OZON 源码素材缺失：delivery-assets/ozon_inventory（业务素材仅保留内网，不随仓库分发）"
+            )
+        copy_tree(ozon_source, staging / "examples" / "feature-packages" / "ozon_inventory")
         write_feature_archive(ozon_source, package_dir / f"OZON库存同步-{version}-online.zip")
         offline_package = None
         if wheel_dir.is_dir() and any(wheel_dir.glob("*.whl")):
