@@ -1,0 +1,4 @@
+item_code,quantity,note
+DEMO-001,10,正常样例
+DEMO-002,0,无库存也属于有效数据
+,5,该行用于验证跳过日志
