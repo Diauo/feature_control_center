@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: feature-control-center:2.1.2
+    image: feature-control-center:2.2.0
     container_name: feature-control-center
     restart: unless-stopped
     ports:

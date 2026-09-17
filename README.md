@@ -1,6 +1,6 @@
 # 功能控制中心
 
-功能控制中心是面向多客户的 Python 功能运行平台。当前版本 `2.1.2` 支持由业务脚本主动提交通用执行结果报表，运行记录可直接核对总数、成功数和失败数，详情页以中文展示逐条结论并导出 XLSX。单次报表明细默认上限为 60000，管理员可在系统设置中调整；平台仍不解释商品模型，也不接管失败项重试。
+功能控制中心是面向多客户的 Python 功能运行平台。当前版本 `2.2.0` 支持由业务脚本主动提交通用执行结果报表，运行记录可直接核对总数、成功数和失败数，详情页以中文展示逐条结论并导出 XLSX。单次报表明细默认上限为 60000，管理员可在系统设置中调整；平台仍不解释商品模型，也不接管失败项重试。
 
 平台兼容旧式功能入口，但不会把商品、库存、失败项或网络重试收进平台领域；这些业务规则仍由甲方脚本负责。
 
@@ -285,23 +285,23 @@ rm -rf backend/app/web/static
 cp -R frontend/dist backend/app/web/static
 
 python -m build --wheel backend
-python -m pip download --only-binary=:all: --dest wheelhouse backend/dist/feature_control_center-2.1.3-py3-none-any.whl
+python -m pip download --only-binary=:all: --dest wheelhouse backend/dist/feature_control_center-2.2.1-py3-none-any.whl
 
 fcc-update-package build \
   --wheelhouse wheelhouse \
   --private-key /secure/offline/update-signing-private.pem \
-  --output feature-control-center-2.1.3-linux-x86_64.fcup \
-  --version 2.1.3 \
-  --compatible-from '>=2.1.2,<3.0.0' \
+  --output feature-control-center-2.2.1-linux-x86_64.fcup \
+  --version 2.2.1 \
+  --compatible-from '>=2.2.0,<3.0.0' \
   --platform linux_x86_64 \
   --python-version 3.14 \
-  --database-revision 0010_report_limit \
+  --database-revision 0011_menu_grants \
   --notes-file release-notes.txt \
   --rollback-compatible
 ```
 
 `wheelhouse` 必须且只能包含一个目标版本的 `feature-control-center` wheel，并包含其全部间接依赖的兼容 wheel。生成工具不会覆盖已有文件。上传前应在同架构的全新交付容器副本上完成一次升级和回退演练。
-上面是从本版 `2.1.2` 制作后续版 `2.1.3` 的发布示例；制作实际版本时，必须同步替换 wheel 文件名、`--output`、`--version`、`--compatible-from` 和 `--database-revision`，不得直接照抄版本号。
+上面是从本版 `2.2.0` 制作后续版 `2.2.1` 的发布示例；制作实际版本时，必须同步替换 wheel 文件名、`--output`、`--version`、`--compatible-from` 和 `--database-revision`，不得直接照抄版本号。
 
 ## 登录状态为何可以保存
 
