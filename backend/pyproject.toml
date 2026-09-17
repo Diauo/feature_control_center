@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "feature-control-center"
-version = "2.2.0"
+version = "2.3.0"
 description = "A portable control center for customer-scoped Python features."
 requires-python = ">=3.13"
 dependencies = [

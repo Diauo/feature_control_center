@@ -29,7 +29,9 @@ from app.infrastructure.models import (
     FeatureDefinitionModel,
     FeatureVersionDefaultDataSourceModel,
     FeatureVersionModel,
+    RunModel,
     RuntimeEnvironmentModel,
+    ScheduledTaskModel,
     UserCustomerModel,
 )
 from app.infrastructure.package_inspector import FeaturePackageInspector
@@ -133,7 +135,42 @@ class FeatureService:
                 )
             )
             if duplicate:
-                raise ConflictError("FEATURE_PACKAGE_EXISTS", "这个功能包内容已经登记过", status=409)
+                deleted_registration = db.scalar(select(CustomerFeatureModel).where(
+                    CustomerFeatureModel.customer_id == customer_id,
+                    CustomerFeatureModel.feature_definition_id == definition.id,
+                    CustomerFeatureModel.is_deleted.is_(True),
+                ))
+                duplicate_version = db.get(FeatureVersionModel, duplicate) if deleted_registration else None
+                if duplicate_version is None or duplicate_version.status not in ("READY", "PREPARING"):
+                    raise ConflictError("FEATURE_PACKAGE_EXISTS", "这个功能包内容已经登记过", status=409)
+                default = db.scalar(
+                    select(FeatureVersionDefaultDataSourceModel)
+                    .options(undefer(FeatureVersionDefaultDataSourceModel.content))
+                    .where(FeatureVersionDefaultDataSourceModel.feature_version_id == duplicate_version.id)
+                )
+                self._revive_customer_feature(
+                    db,
+                    deleted_registration,
+                    version=duplicate_version,
+                    config_schema=self._config_schema(duplicate_version),
+                    data_schema=self._data_schema(duplicate_version),
+                    default_source=default,
+                    actor_user_id=actor.user_id,
+                    now=now,
+                )
+                add_audit(
+                    db,
+                    now=now,
+                    request=request,
+                    action="admin.feature_version.upload",
+                    outcome="success",
+                    actor_user_id=actor.user_id,
+                    session_id=actor.session_id,
+                    target_type="feature_version",
+                    target_id=duplicate_version.id,
+                    details={"definitionId": definition.id, "version": duplicate_version.version_number, "customerId": customer_id, "restored": True},
+                )
+                return {"version": self.get_version(duplicate_version.id), "activatedForCustomer": True, "restored": True}
             version_number = (db.scalar(select(func.max(FeatureVersionModel.version_number)).where(
                 FeatureVersionModel.feature_definition_id == definition.id
             )) or 0) + 1
@@ -210,7 +247,19 @@ class FeatureService:
                 CustomerFeatureModel.customer_id == customer_id,
                 CustomerFeatureModel.feature_definition_id == definition.id,
             ))
-            activated = customer_feature is None
+            restored = customer_feature is not None and customer_feature.is_deleted
+            if restored:
+                self._revive_customer_feature(
+                    db,
+                    customer_feature,
+                    version=version,
+                    config_schema=package.metadata.config_schema,
+                    data_schema=package.metadata.data_source_schema,
+                    default_source=package.default_data_source,
+                    actor_user_id=actor.user_id,
+                    now=now,
+                )
+            activated = customer_feature is None or restored
             if customer_feature is None:
                 customer_feature = CustomerFeatureModel(
                     id=uuid.uuid4().hex,
@@ -246,10 +295,10 @@ class FeatureService:
                 session_id=actor.session_id,
                 target_type="feature_version",
                 target_id=version.id,
-                details={"definitionId": definition.id, "version": version_number, "customerId": customer_id, "activated": activated},
+                details={"definitionId": definition.id, "version": version_number, "customerId": customer_id, "activated": activated, "restored": restored},
             )
             version_id = version.id
-        return {"version": self.get_version(version_id), "activatedForCustomer": activated}
+        return {"version": self.get_version(version_id), "activatedForCustomer": activated, "restored": restored}
 
     def retry_prepare(self, *, actor: AuthContext, version_id: str, request: RequestMetadata) -> dict[str, Any]:
         self._require_menu(actor, MenuKey.FEATURE_ADMIN)
@@ -310,7 +359,8 @@ class FeatureService:
         with self.database.session() as db:
             customer = self._require_customer_access(db, actor, customer_id)
             rows = db.scalars(select(CustomerFeatureModel).where(
-                CustomerFeatureModel.customer_id == customer_id
+                CustomerFeatureModel.customer_id == customer_id,
+                CustomerFeatureModel.is_deleted.is_(False),
             ).order_by(CustomerFeatureModel.display_name)).all()
             return [self._customer_feature_dict(db, row, customer_name=customer.name) for row in rows]
 
@@ -329,7 +379,10 @@ class FeatureService:
         with self.database.session() as db:
             statement = select(CustomerFeatureModel, CustomerModel.name).join(
                 CustomerModel, CustomerModel.id == CustomerFeatureModel.customer_id
-            ).where(CustomerModel.is_active.is_(True))
+            ).where(
+                CustomerModel.is_active.is_(True),
+                CustomerFeatureModel.is_deleted.is_(False),
+            )
             if customer_id:
                 self._require_customer_access(db, actor, customer_id)
                 statement = statement.where(CustomerFeatureModel.customer_id == customer_id)
@@ -467,6 +520,40 @@ class FeatureService:
                     CustomerFeatureModel.feature_definition_id == definition_id,
                 )
             )
+            if existing is not None and existing.is_deleted:
+                default = db.scalar(
+                    select(FeatureVersionDefaultDataSourceModel)
+                    .options(undefer(FeatureVersionDefaultDataSourceModel.content))
+                    .where(FeatureVersionDefaultDataSourceModel.feature_version_id == version.id)
+                )
+                self._revive_customer_feature(
+                    db,
+                    existing,
+                    version=version,
+                    config_schema=self._config_schema(version),
+                    data_schema=self._data_schema(version),
+                    default_source=default,
+                    actor_user_id=actor.user_id,
+                    now=now,
+                )
+                add_audit(
+                    db,
+                    now=now,
+                    request=request,
+                    action="admin.customer_feature.copy",
+                    outcome="success",
+                    actor_user_id=actor.user_id,
+                    session_id=actor.session_id,
+                    target_type="customer_feature",
+                    target_id=existing.id,
+                    details={"sourceCustomerId": source_customer_id, "targetCustomerId": target_customer_id, "restored": True},
+                )
+                return {
+                    "customerId": target_customer_id,
+                    "status": "COPIED",
+                    "customerFeatureId": existing.id,
+                    "message": "已恢复该客户此前删除的功能（历史记录保留）",
+                }
             if existing is not None:
                 add_audit(
                     db,
@@ -550,6 +637,128 @@ class FeatureService:
                 "customerFeatureId": copied.id,
                 "message": "复制完成",
             }
+
+    def delete_customer_feature(
+        self,
+        *,
+        actor: AuthContext,
+        customer_feature_id: str,
+        request: RequestMetadata,
+    ) -> dict[str, Any]:
+        """软删除功能登记：保留登记行与版本记录（历史运行可查），清空客户侧配置与数据源。"""
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
+        self.auth.require_recent_auth(actor, max_age_seconds=120)  # 高危操作：要求刚刚验证过密码
+        now = self.clock.now()
+        with self.database.session() as db:
+            feature = self._require_customer_feature(db, actor, customer_feature_id)
+            active = db.scalar(
+                select(func.count(RunModel.request_id)).where(
+                    RunModel.customer_feature_id == feature.id,
+                    RunModel.status.in_(("QUEUED", "STARTING", "RUNNING", "STOPPING")),
+                )
+            )
+            if active:
+                raise ConflictError("FEATURE_RUN_ACTIVE", "该功能有正在处理的任务，请先停止或等待完成", status=409)
+            config_count = db.execute(
+                delete(FeatureConfigValueModel).where(FeatureConfigValueModel.customer_feature_id == feature.id)
+            ).rowcount
+            schedule_count = db.execute(
+                delete(ScheduledTaskModel).where(ScheduledTaskModel.customer_feature_id == feature.id)
+            ).rowcount
+            revisions = db.scalars(
+                select(CustomerFeatureDataSourceRevisionModel).where(
+                    CustomerFeatureDataSourceRevisionModel.customer_feature_id == feature.id
+                )
+            ).all()
+            revision_purged = 0
+            revision_blanked = 0
+            for revision in revisions:
+                referenced = db.scalar(
+                    select(RunModel.request_id).where(RunModel.data_source_revision_id == revision.id).limit(1)
+                )
+                if referenced:
+                    revision.content = b""
+                    revision_blanked += 1
+                else:
+                    db.delete(revision)
+                    revision_purged += 1
+            feature.current_data_source_revision_id = None
+            feature.is_deleted = True
+            feature.deleted_at = now
+            feature.deleted_by = actor.user_id
+            feature.is_enabled = False
+            feature.updated_at = now
+            add_audit(
+                db,
+                now=now,
+                request=request,
+                action="admin.customer_feature.delete",
+                outcome="success",
+                actor_user_id=actor.user_id,
+                session_id=actor.session_id,
+                target_type="customer_feature",
+                target_id=feature.id,
+                details={
+                    "customerId": feature.customer_id,
+                    "definitionId": feature.feature_definition_id,
+                    "configCount": config_count,
+                    "scheduleCount": schedule_count,
+                    "revisionPurged": revision_purged,
+                    "revisionBlanked": revision_blanked,
+                },
+            )
+            return {
+                "deleted": True,
+                "customerFeatureId": feature.id,
+                "configCount": config_count,
+                "scheduleCount": schedule_count,
+                "revisionPurged": revision_purged,
+                "revisionBlanked": revision_blanked,
+            }
+
+    def _revive_customer_feature(
+        self,
+        db: Any,
+        feature: CustomerFeatureModel,
+        *,
+        version: FeatureVersionModel,
+        config_schema: dict[str, Any],
+        data_schema: dict[str, Any] | None,
+        default_source: Any,
+        actor_user_id: str,
+        now: int,
+    ) -> None:
+        """恢复已删除的功能登记：复用同一行，历史运行记录自然延续。"""
+        feature.is_deleted = False
+        feature.deleted_at = None
+        feature.deleted_by = None
+        feature.feature_version_id = version.id
+        feature.display_name = version.name
+        feature.description = version.description
+        feature.is_enabled = True
+        feature.max_runtime_seconds = None
+        feature.current_data_source_revision_id = None
+        feature.updated_at = now
+        self._initialize_config_defaults(db, feature.id, config_schema, actor_user_id, now)
+        if default_source is not None:
+            last_number = db.scalar(
+                select(func.max(CustomerFeatureDataSourceRevisionModel.revision_number)).where(
+                    CustomerFeatureDataSourceRevisionModel.customer_feature_id == feature.id
+                )
+            ) or 0
+            revision = self._create_data_source_revision(
+                db,
+                feature.id,
+                last_number + 1,
+                "DEFAULT",
+                version.id,
+                default_source.filename,
+                default_source.content,
+                actor_user_id,
+                now,
+            )
+            feature.current_data_source_revision_id = revision.id
+        feature.status = self._derive_status(feature, version, data_schema)
 
     def set_enabled(
         self,
@@ -929,6 +1138,8 @@ class FeatureService:
         feature = db.get(CustomerFeatureModel, feature_id)
         if feature is None:
             raise ConflictError("CUSTOMER_FEATURE_NOT_FOUND", "客户功能不存在", status=404)
+        if feature.is_deleted:
+            raise ConflictError("FEATURE_DELETED", "功能已删除，重新上传后可恢复", status=409)
         self._require_customer_access(db, actor, feature.customer_id)
         return feature
 

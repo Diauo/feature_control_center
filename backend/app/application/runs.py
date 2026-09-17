@@ -154,6 +154,8 @@ class RunService:
         )
         if active_update:
             raise ConflictError("SYSTEM_UPDATE_IN_PROGRESS", "系统正在更新或回退，暂时不能创建新任务", status=409)
+        if feature.is_deleted:
+            raise ConflictError("FEATURE_DELETED", "功能已删除，不能创建任务", status=409)
         if not feature.is_enabled or feature.status != "ACTIVE":
             raise ConflictError("FEATURE_NOT_RUNNABLE", "功能尚未满足运行条件", status=409)
         duplicate = db.scalar(

@@ -168,7 +168,7 @@ def test_update_overview_and_default_rar_setting(client, tmp_path: Path):
 
     overview = client.get("/api/admin/system/updates")
     assert overview.status_code == 200
-    assert overview.get_json()["currentVersion"] == "2.2.0"
+    assert overview.get_json()["currentVersion"] == "2.3.0"
     assert overview.get_json()["supervisor"]["available"] is False
     assert overview.get_json()["items"] == []
     assert overview.get_json()["pagination"]["total"] == 0

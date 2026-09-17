@@ -32,6 +32,22 @@ const reauthPassword = ref('')
 const reauthError = ref('')
 const temporaryPassword = ref('')
 const temporaryOwner = ref('')
+const deleteTarget = ref<UserSummary | null>(null)
+const deletePassword = ref('')
+const deleteError = ref('')
+
+function openDeleteUser(user: UserSummary): void {
+  deleteTarget.value = user
+  deletePassword.value = ''
+  deleteError.value = ''
+}
+
+function closeDeleteUser(): void {
+  if (busy.value) return
+  deleteTarget.value = null
+  deletePassword.value = ''
+  deleteError.value = ''
+}
 const copied = ref(false)
 const activeRole = ref<UserRole>('operator')
 const pagination = ref<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 1 })
@@ -186,6 +202,34 @@ async function resetPassword(user: UserSummary): Promise<void> {
   })
 }
 
+async function deleteUser(user: UserSummary): Promise<void> {
+  if (!deletePassword.value) {
+    deleteError.value = '请输入当前登录账号的密码'
+    return
+  }
+  busy.value = true
+  deleteError.value = ''
+  try {
+    await session.reauthenticate(deletePassword.value)
+  } catch (reason) {
+    deleteError.value = reason instanceof ApiError ? reason.message : '密码验证失败，请重试'
+    busy.value = false
+    return
+  }
+  try {
+    await apiRequest(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+    deleteTarget.value = null
+    deletePassword.value = ''
+    await load()
+    notify.success('用户已删除', { description: `${user.displayName} · 历史审计记录保留` })
+  } catch (reason) {
+    deleteError.value = reason instanceof ApiError ? reason.message : '删除失败，请稍后重试'
+    notify.error('删除失败', { description: deleteError.value })
+  } finally {
+    busy.value = false
+  }
+}
+
 async function revokeSessions(user: UserSummary): Promise<void> {
   if (!window.confirm(`确定让“${user.displayName}”的所有登录会话立即退出吗？`)) return
   await runSensitive(async () => {
@@ -315,7 +359,7 @@ function readableError(error: unknown, fallback: string): string {
               <td v-if="activeRole === 'operator'" class="muted-cell">{{ menuNames(user) }}</td>
               <td class="muted-cell">{{ formatTime(user.lastLoginAt) }}</td>
               <td><span class="status-pill" :class="user.isActive === false ? 'status-pill--off' : 'status-pill--on'">{{ user.isActive === false ? '已停用' : '正常' }}</span></td>
-              <td><div class="row-actions"><button class="text-button" type="button" @click="openEdit(user)">编辑</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="resetPassword(user)">重置密码</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="revokeSessions(user)">退出会话</button></div></td>
+              <td><div class="row-actions"><button class="text-button" type="button" @click="openEdit(user)">编辑</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="resetPassword(user)">重置密码</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="revokeSessions(user)">退出会话</button><button v-if="user.role === 'operator' && user.id !== session.user?.id" class="text-button text-button--danger" type="button" :disabled="busy" @click="openDeleteUser(user)">删除</button></div></td>
             </tr>
           </tbody>
         </table>
@@ -347,7 +391,18 @@ function readableError(error: unknown, fallback: string): string {
       <template #footer><button class="secondary-button" type="button" @click="editOpen = false">取消</button><button class="primary-button" type="submit" form="edit-user-form" :disabled="busy || (form.role === 'operator' && form.menuKeys.length === 0)">{{ busy ? '正在保存…' : '保存修改' }}</button></template>
     </ModalDialog>
 
-    <ModalDialog :open="reauthOpen" title="验证管理员身份" description="这是敏感操作，请输入当前登录账号的密码。" :closeable="!busy" width="small" @close="cancelReauthentication">
+    <ModalDialog :open="Boolean(deleteTarget)" title="删除用户" :description="deleteTarget ? `即将删除 @${deleteTarget.username}` : ''" width="small" :closeable="!busy" @close="closeDeleteUser">
+      <div class="form-stack">
+        <p class="notice-copy">删除后该账号将无法登录，其登录会话立即失效。</p>
+        <p class="notice-copy">该操作不可撤销；历史审计记录会保留账号快照。</p>
+        <label class="field"><span>当前登录账号的密码</span><input v-model="deletePassword" type="password" autocomplete="current-password" :disabled="busy" /></label>
+        <p class="notice-copy">使用你登录本系统的账号密码确认（管理员与业务员都用本人密码）。</p>
+        <p v-if="deleteError" class="form-error" role="alert">{{ deleteError }}</p>
+      </div>
+      <template #footer><button class="secondary-button" type="button" :disabled="busy" @click="closeDeleteUser">取消</button><button class="danger-button" type="button" :disabled="busy" @click="deleteTarget && deleteUser(deleteTarget)">{{ busy ? '正在验证并删除…' : '确认删除' }}</button></template>
+    </ModalDialog>
+
+    <ModalDialog :open="reauthOpen" title="验证身份" description="这是敏感操作，请输入当前登录账号的密码。" :closeable="!busy" width="small" @close="cancelReauthentication">
       <form id="reauth-form" class="form-stack" @submit.prevent="confirmReauthentication"><label class="field"><span>当前密码</span><input v-model="reauthPassword" type="password" autocomplete="current-password" autofocus required /></label><p v-if="reauthError" class="form-error" role="alert">{{ reauthError }}</p></form>
       <template #footer><button class="secondary-button" type="button" :disabled="busy" @click="cancelReauthentication">取消</button><button class="primary-button" type="submit" form="reauth-form" :disabled="busy">{{ busy ? '正在验证…' : '继续' }}</button></template>
     </ModalDialog>

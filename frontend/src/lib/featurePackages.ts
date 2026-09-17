@@ -14,9 +14,14 @@ export function featurePackageExtensions(formats: readonly string[]): string[] {
   return [...new Set(formats.flatMap((format) => FEATURE_PACKAGE_FORMAT_EXTENSIONS[format] ?? []))]
 }
 
-export async function uploadFeaturePackage(customerId: string, file: File): Promise<void> {
+export interface FeatureUploadResult {
+  restored?: boolean
+  activatedForCustomer?: boolean
+}
+
+export async function uploadFeaturePackage(customerId: string, file: File): Promise<FeatureUploadResult> {
   const body = new FormData()
   body.append('customerId', customerId)
   body.append('package', file)
-  await apiRequest('/api/admin/features/versions', { method: 'POST', body })
+  return await apiRequest<FeatureUploadResult>('/api/admin/features/versions', { method: 'POST', body })
 }

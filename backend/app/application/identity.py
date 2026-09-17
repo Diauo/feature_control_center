@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
@@ -301,6 +301,47 @@ class IdentityService:
                 details={"revokedSessions": count},
             )
             return temp_password
+
+    def delete_user(
+        self,
+        *,
+        actor: AuthContext,
+        user_id: str,
+        request: RequestMetadata,
+    ) -> dict[str, Any]:
+        """硬删除业务员账号：管理员不可删除，历史审计保留账号快照。"""
+        self._ensure_menu(actor, MenuKey.USERS)
+        self.auth.require_recent_auth(actor, max_age_seconds=120)  # 高危操作：要求刚刚验证过密码
+        if user_id == actor.user_id:
+            raise ConflictError("CANNOT_DELETE_SELF", "不能删除当前登录账号", status=409)
+        now = self.clock.now()
+        with self.database.session() as db:
+            user = db.get(UserModel, user_id)
+            if user is None:
+                raise ConflictError("USER_NOT_FOUND", "用户不存在", status=404)
+            if user.role == UserRole.ADMIN:
+                raise ConflictError("CANNOT_DELETE_ADMIN", "不能删除系统管理员账户", status=409)
+            snapshot = {
+                "username": user.username,
+                "displayName": user.display_name,
+                "role": user.role,
+                "customerCount": len(user.customer_links),
+            }
+            db.execute(delete(SessionModel).where(SessionModel.user_id == user.id))
+            add_audit(
+                db,
+                now=now,
+                request=request,
+                action="admin.user.delete",
+                outcome="success",
+                actor_user_id=actor.user_id,
+                session_id=actor.session_id,
+                target_type="user",
+                target_id=user.id,
+                details=snapshot,
+            )
+            db.delete(user)
+            return {"deleted": True, "userId": user_id}
 
     def list_customers(self, actor: AuthContext, *, page: int = 1, page_size: int = 20) -> tuple[list[dict[str, Any]], int]:
         self._ensure_menu(actor, MenuKey.CUSTOMERS)

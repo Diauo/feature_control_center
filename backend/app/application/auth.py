@@ -265,9 +265,10 @@ class AuthService:
             raise AuthenticationError("INVALID_PASSWORD", "当前密码错误", status=401)
         return issued
 
-    def require_recent_auth(self, context: AuthContext) -> None:
+    def require_recent_auth(self, context: AuthContext, *, max_age_seconds: int | None = None) -> None:
+        limit = self.settings.security().reauth_seconds if max_age_seconds is None else max_age_seconds
         reauthenticated_at = context.reauthenticated_at
-        if reauthenticated_at is None or self.clock.now() - reauthenticated_at > self.settings.security().reauth_seconds:
+        if reauthenticated_at is None or self.clock.now() - reauthenticated_at > limit:
             raise AuthenticationError("REAUTHENTICATION_REQUIRED", "此操作需要重新验证密码", status=428)
 
     def verify_csrf(self, context: AuthContext, supplied: str | None) -> bool:
