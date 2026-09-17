@@ -47,6 +47,22 @@ def prepare_runs_root(runs_root: Path, script_gid: int) -> None:
     _ensure_directory(runs_root, uid=0, gid=script_gid, mode=0o710)
 
 
+def ensure_log_files_readable(directory: Path, web_gid: int) -> None:
+    """把根进程（runner/launcher）写出的系统日志归一为 web 组可读。
+
+    容器内 runner 需要 root 身份以便把功能脚本降权到 fcc-script，因此它写出的
+    日志文件不会继承目录的 setgid 组；启动时统一修正已有文件，配合目录 setgid
+    保证后续新文件同样可读，避免 web 服务读取程序日志时报 PermissionError。
+    """
+    if not directory.is_dir():
+        return
+    for path in sorted(directory.glob("*.jsonl")):
+        if path.is_symlink():
+            continue
+        _chown(path, -1, web_gid)
+        _chmod(path, 0o660)
+
+
 def shared_file_mode(source_mode: int) -> int:
     return 0o550 if source_mode & 0o111 else 0o440
 
