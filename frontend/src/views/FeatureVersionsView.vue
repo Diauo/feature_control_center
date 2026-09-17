@@ -38,6 +38,8 @@ const copySource = ref<CustomerFeature | null>(null)
 const copyTargetIds = ref<string[]>([])
 const copyResults = ref<CopyResult[]>([])
 const configFeature = ref<{ id: string; name: string } | null>(null)
+const deleteTarget = ref<CustomerFeature | null>(null)
+const deleteBusy = ref(false)
 const allowedFormats = ref<string[]>(['zip'])
 const uploadExtensions = computed(() => featurePackageExtensions(allowedFormats.value))
 const uploadAccept = computed(() => uploadExtensions.value.join(','))
@@ -124,11 +126,15 @@ async function upload(): Promise<void> {
   await sensitive(async () => {
     busy.value = true
     try {
-      await uploadFeaturePackage(session.currentCustomerId!, packageFile.value!)
+      const uploadResult = await uploadFeaturePackage(session.currentCustomerId!, packageFile.value!)
       const uploadedName = packageFile.value!.name
       packageFile.value = null
       await load()
-      notify.success('功能包已登记', { description: `${uploadedName} 正在准备隔离依赖环境` })
+      if (uploadResult?.restored) {
+        notify.success('功能已恢复', { description: `${uploadedName} · 此前删除的登记已恢复，历史运行记录延续` })
+      } else {
+        notify.success('功能包已登记', { description: `${uploadedName} 正在准备隔离依赖环境` })
+      }
     } finally { busy.value = false }
   })
 }
@@ -196,6 +202,28 @@ function openConfig(definition: FeatureDefinition): void {
 
 function closeConfig(): void {
   configFeature.value = null
+}
+
+function openDelete(definition: FeatureDefinition): void {
+  const feature = currentCustomerFeature(definition.id)
+  if (!feature) return
+  deleteTarget.value = feature
+}
+
+async function confirmDelete(): Promise<void> {
+  const feature = deleteTarget.value
+  if (!feature) return
+  await sensitive(async () => {
+    deleteBusy.value = true
+    try {
+      await apiRequest(`/api/admin/customer-features/${feature.id}`, { method: 'DELETE' })
+      deleteTarget.value = null
+      await loadCustomerFeatures()
+      notify.success('功能已删除', { description: `${feature.customerName} · ${feature.name} · 历史运行记录保留` })
+    } finally {
+      deleteBusy.value = false
+    }
+  })
 }
 
 function openCopy(definitionId: string): void {
@@ -275,7 +303,7 @@ function changePage(page: number, pageSize: number): void { pagination.value = {
     <article v-else-if="definitions.length === 0" class="content-card empty-state-card"><div class="empty-icon">＋</div><h2>尚未登记功能</h2><p>首次上传某个功能时，会为当前客户创建独立的配置和默认数据源副本。</p></article>
     <div v-else class="definition-list">
       <article v-for="definition in definitions" :key="definition.id" class="content-card definition-card">
-        <header><div><h2>{{ definition.name }}</h2></div><div class="row-actions"><span>{{ definition.versions.length }} 个版本</span><button v-if="currentCustomerFeature(definition.id)" class="primary-button secondary-button--compact" type="button" :disabled="busy || runningId !== null || Boolean(runDisabledReason(currentCustomerFeature(definition.id)))" :title="runDisabledReason(currentCustomerFeature(definition.id))" @click="startRun(definition.id)">{{ runningId === currentCustomerFeature(definition.id)?.id ? '正在创建…' : '运行功能' }}</button><button v-if="currentCustomerFeature(definition.id)" class="secondary-button secondary-button--compact" type="button" :disabled="busy || runningId !== null" @click="openConfig(definition)">配置管理</button><button v-if="currentVersion(definition.id)" class="secondary-button secondary-button--compact" type="button" :disabled="runningId !== null" @click="openCopy(definition.id)">复制给其他客户</button></div></header>
+        <header><div><h2>{{ definition.name }}</h2></div><div class="row-actions"><span>{{ definition.versions.length }} 个版本</span><button v-if="currentCustomerFeature(definition.id)" class="primary-button secondary-button--compact" type="button" :disabled="busy || runningId !== null || Boolean(runDisabledReason(currentCustomerFeature(definition.id)))" :title="runDisabledReason(currentCustomerFeature(definition.id))" @click="startRun(definition.id)">{{ runningId === currentCustomerFeature(definition.id)?.id ? '正在创建…' : '运行功能' }}</button><button v-if="currentCustomerFeature(definition.id)" class="secondary-button secondary-button--compact" type="button" :disabled="busy || runningId !== null" @click="openConfig(definition)">配置管理</button><button v-if="currentCustomerFeature(definition.id)" class="text-button text-button--danger" type="button" :disabled="busy || runningId !== null" @click="openDelete(definition)">删除功能</button><button v-if="currentVersion(definition.id)" class="secondary-button secondary-button--compact" type="button" :disabled="runningId !== null" @click="openCopy(definition.id)">复制给其他客户</button></div></header>
         <div class="table-scroll"><table><thead><tr><th>版本</th><th>状态</th><th>包与时间</th><th>数据源</th><th class="align-right">操作</th></tr></thead><tbody>
           <tr v-for="version in definition.versions" :key="version.id"><td><strong>代码版本 {{ version.versionNumber }}</strong><span v-if="currentVersion(definition.id) === version.id" class="block-copy">当前客户正在使用</span></td><td><span class="status-pill" :class="version.status === 'READY' ? 'status-pill--on' : version.status === 'DEPENDENCY_FAILED' ? 'status-pill--danger' : 'status-pill--warn'">{{ version.status }}</span><small v-if="version.prepareError" class="error-copy">{{ version.prepareError }}</small></td><td class="muted-cell">{{ version.packageFilename }}<span class="block-copy">{{ formatDate(version.createdAt) }}</span></td><td class="muted-cell">{{ version.defaultDataSource?.filename ?? '无默认文件' }}</td><td><div class="row-actions"><button v-if="version.defaultDataSource" class="text-button" type="button" @click="downloadDefaultDataSource(version)">下载默认文件</button><button v-if="version.status === 'DEPENDENCY_FAILED'" class="text-button" type="button" :disabled="busy" @click="retry(version)">重试依赖</button><button v-if="version.status === 'READY' && currentVersion(definition.id) && currentVersion(definition.id) !== version.id" class="text-button" type="button" :disabled="busy" @click="activate(definition, version)">用于当前客户</button></div></td></tr>
         </tbody></table></div>
@@ -296,6 +324,13 @@ function changePage(page: number, pageSize: number): void { pagination.value = {
       <template #footer><button class="secondary-button" type="button" :disabled="busy" @click="copyOpen = false">{{ copyResults.length ? '完成' : '取消' }}</button><button v-if="!copyResults.length" class="primary-button" type="button" :disabled="busy || copyTargetIds.length === 0" @click="copyFeature">{{ busy ? '正在复制…' : `复制到 ${copyTargetIds.length} 个客户` }}</button></template>
     </ModalDialog>
     <ModalDialog :open="reauthOpen" title="验证管理员身份" description="上传代码、准备依赖或切换版本属于敏感操作。" :closeable="!busy" width="small" @close="reauthOpen = false"><form id="feature-reauth" class="form-stack" @submit.prevent="confirmReauth"><label class="field"><span>当前密码</span><input v-model="reauthPassword" type="password" autocomplete="current-password" required /></label><p v-if="reauthError" class="form-error">{{ reauthError }}</p></form><template #footer><button class="secondary-button" type="button" @click="reauthOpen = false">取消</button><button class="primary-button" type="submit" form="feature-reauth" :disabled="busy">继续</button></template></ModalDialog>
+    <ModalDialog :open="Boolean(deleteTarget)" title="删除功能" description="删除后该客户的功能将从工作台移除，配置、数据源和定时任务会被清除。" width="small" :closeable="!deleteBusy" @close="deleteTarget = null">
+      <div class="form-stack">
+        <p v-if="deleteTarget" class="notice-copy"><strong>{{ deleteTarget.customerName }} · {{ deleteTarget.name }}</strong></p>
+        <p class="notice-copy">历史运行记录会保留并可继续查询；以后重新上传同一功能包即可恢复该登记（日志延续）。</p>
+      </div>
+      <template #footer><button class="secondary-button" type="button" :disabled="deleteBusy" @click="deleteTarget = null">取消</button><button class="danger-button" type="button" :disabled="deleteBusy" @click="confirmDelete">{{ deleteBusy ? '正在删除…' : '确认删除' }}</button></template>
+    </ModalDialog>
     <FeatureConfigDrawer v-if="configFeature" :feature-id="configFeature.id" :feature-name="configFeature.name" @close="closeConfig" @saved="loadCustomerFeatures" />
   </section>
 </template>

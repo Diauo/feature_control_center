@@ -213,6 +213,18 @@ def update_customer_feature(feature_id: str):
     )})
 
 
+@blueprint.delete("/api/admin/customer-features/<feature_id>")
+@require_menu("feature_admin")
+@require_management_network
+@require_session_csrf
+def delete_customer_feature(feature_id: str):
+    return jsonify(services().features.delete_customer_feature(
+        actor=g.auth,
+        customer_feature_id=feature_id,
+        request=request_security().metadata(request),
+    ))
+
+
 def _download(item):
     response = send_file(
         io.BytesIO(item.content),

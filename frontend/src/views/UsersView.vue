@@ -32,6 +32,7 @@ const reauthPassword = ref('')
 const reauthError = ref('')
 const temporaryPassword = ref('')
 const temporaryOwner = ref('')
+const deleteTarget = ref<UserSummary | null>(null)
 const copied = ref(false)
 const activeRole = ref<UserRole>('operator')
 const pagination = ref<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 1 })
@@ -186,6 +187,20 @@ async function resetPassword(user: UserSummary): Promise<void> {
   })
 }
 
+async function deleteUser(user: UserSummary): Promise<void> {
+  await runSensitive(async () => {
+    busy.value = true
+    try {
+      await apiRequest(`/api/admin/users/${user.id}`, { method: 'DELETE' })
+      deleteTarget.value = null
+      await load()
+      notify.success('用户已删除', { description: `${user.displayName} · 历史审计记录保留` })
+    } finally {
+      busy.value = false
+    }
+  })
+}
+
 async function revokeSessions(user: UserSummary): Promise<void> {
   if (!window.confirm(`确定让“${user.displayName}”的所有登录会话立即退出吗？`)) return
   await runSensitive(async () => {
@@ -315,7 +330,7 @@ function readableError(error: unknown, fallback: string): string {
               <td v-if="activeRole === 'operator'" class="muted-cell">{{ menuNames(user) }}</td>
               <td class="muted-cell">{{ formatTime(user.lastLoginAt) }}</td>
               <td><span class="status-pill" :class="user.isActive === false ? 'status-pill--off' : 'status-pill--on'">{{ user.isActive === false ? '已停用' : '正常' }}</span></td>
-              <td><div class="row-actions"><button class="text-button" type="button" @click="openEdit(user)">编辑</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="resetPassword(user)">重置密码</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="revokeSessions(user)">退出会话</button></div></td>
+              <td><div class="row-actions"><button class="text-button" type="button" @click="openEdit(user)">编辑</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="resetPassword(user)">重置密码</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="revokeSessions(user)">退出会话</button><button v-if="user.role === 'operator' && user.id !== session.user?.id" class="text-button text-button--danger" type="button" :disabled="busy" @click="deleteTarget = user">删除</button></div></td>
             </tr>
           </tbody>
         </table>
@@ -345,6 +360,14 @@ function readableError(error: unknown, fallback: string): string {
         <div v-if="form.role === 'operator'" class="field field--wide"><span>可管理客户</span><div class="check-grid"><label v-for="customer in customers.filter((item) => item.isActive)" :key="customer.id" class="check-item"><input v-model="form.customerIds" type="checkbox" :value="customer.id" /><span>{{ customer.name }}</span></label></div></div><p v-if="errorMessage" class="form-error field--wide" role="alert">{{ errorMessage }}</p>
       </form>
       <template #footer><button class="secondary-button" type="button" @click="editOpen = false">取消</button><button class="primary-button" type="submit" form="edit-user-form" :disabled="busy || (form.role === 'operator' && form.menuKeys.length === 0)">{{ busy ? '正在保存…' : '保存修改' }}</button></template>
+    </ModalDialog>
+
+    <ModalDialog :open="Boolean(deleteTarget)" title="删除用户" :description="deleteTarget ? `即将删除 @${deleteTarget.username}` : ''" width="small" :closeable="!busy" @close="deleteTarget = null">
+      <div class="form-stack">
+        <p class="notice-copy">删除后该账号将无法登录，其登录会话立即失效。</p>
+        <p class="notice-copy">该操作不可撤销；历史审计记录会保留账号快照。</p>
+      </div>
+      <template #footer><button class="secondary-button" type="button" :disabled="busy" @click="deleteTarget = null">取消</button><button class="danger-button" type="button" :disabled="busy" @click="deleteTarget && deleteUser(deleteTarget)">{{ busy ? '正在删除…' : '确认删除' }}</button></template>
     </ModalDialog>
 
     <ModalDialog :open="reauthOpen" title="验证管理员身份" description="这是敏感操作，请输入当前登录账号的密码。" :closeable="!busy" width="small" @close="cancelReauthentication">

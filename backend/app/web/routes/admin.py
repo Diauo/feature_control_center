@@ -114,6 +114,18 @@ def revoke_sessions(user_id: str):
     return jsonify({"revokedSessions": count})
 
 
+@blueprint.delete("/users/<user_id>")
+@require_menu("users")
+@require_management_network
+@require_session_csrf
+def delete_user(user_id: str):
+    return jsonify(services().identity.delete_user(
+        actor=g.auth,
+        user_id=user_id,
+        request=request_security().metadata(request),
+    ))
+
+
 @blueprint.get("/customers")
 @require_menu("customers")
 @require_management_network

@@ -323,6 +323,9 @@ class CustomerFeatureModel(Base):
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
     updated_at: Mapped[int] = mapped_column(Integer, nullable=False)
     created_by: Mapped[str | None] = mapped_column(String(32), ForeignKey("user.id", ondelete="SET NULL"))
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    deleted_at: Mapped[int | None] = mapped_column(Integer)
+    deleted_by: Mapped[str | None] = mapped_column(String(32))
 
 
 class FeatureConfigValueModel(Base):

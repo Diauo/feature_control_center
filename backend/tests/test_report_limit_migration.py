@@ -24,6 +24,11 @@ def test_report_limit_migration_preserves_existing_details(tmp_path: Path) -> No
             INSERT INTO user (id, role) VALUES ('operator-user-0001', 'operator');
             INSERT INTO user (id, role) VALUES ('admin-user-0002', 'admin');
 
+            CREATE TABLE customer_feature (
+                id VARCHAR(32) NOT NULL PRIMARY KEY,
+                status VARCHAR(32) NOT NULL
+            );
+
             CREATE TABLE run (
                 request_id VARCHAR(32) NOT NULL PRIMARY KEY
             );
@@ -96,7 +101,7 @@ def test_report_limit_migration_preserves_existing_details(tmp_path: Path) -> No
 
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (
-            "0011_menu_grants",
+            "0012_feature_deletion",
         )
         assert connection.execute(
             "SELECT menu_key FROM user_menu_grant WHERE user_id = 'operator-user-0001' ORDER BY menu_key"
