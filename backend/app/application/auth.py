@@ -11,10 +11,10 @@ from sqlalchemy.orm import Session
 from app.application.audit import RequestMetadata, add_audit
 from app.application.errors import AuthenticationError
 from app.application.settings import SettingsService
-from app.domain.identity import UserRole, normalize_username
+from app.domain.identity import ALL_MENU_KEYS, UserRole, normalize_username
 from app.domain.time import Clock
 from app.infrastructure.database import Database
-from app.infrastructure.models import LoginRateLimitModel, SessionModel, UserModel
+from app.infrastructure.models import LoginRateLimitModel, SessionModel, UserMenuGrantModel, UserModel
 from app.security.crypto import derive_key, digest_value, generate_opaque_token, user_agent_digest
 from app.security.passwords import PasswordService
 
@@ -29,6 +29,12 @@ class AuthContext:
     must_change_password: bool
     csrf_token: str
     reauthenticated_at: int | None
+    menus: frozenset[str]
+
+    def has_menu(self, *keys: str) -> bool:
+        if self.role is UserRole.ADMIN:
+            return True
+        return bool(self.menus.intersection(keys))
 
 
 @dataclass(frozen=True, slots=True)
@@ -157,7 +163,7 @@ class AuthService:
             if now - session.last_seen_at >= self._TOUCH_INTERVAL_SECONDS:
                 session.last_seen_at = now
                 session.idle_expires_at = min(now + settings.idle_seconds, session.absolute_expires_at)
-            result = self._context(session, user)
+            result = self._context(db, session, user)
         return result
 
     def logout(self, context: AuthContext, request: RequestMetadata) -> None:
@@ -197,7 +203,7 @@ class AuthService:
                 )
             else:
                 session.reauthenticated_at = now
-                updated = self._context(session, user)
+                updated = self._context(db, session, user)
                 add_audit(
                     db,
                     now=now,
@@ -349,7 +355,7 @@ class AuthService:
             old_session.revoked_at = now
             old_session.revoked_reason = "session_limit"
 
-        context = self._context(session, user)
+        context = self._context(db, session, user)
         return IssuedSession(
             token=raw_token,
             csrf_token=csrf_token,
@@ -357,17 +363,26 @@ class AuthService:
             context=context,
         )
 
-    @staticmethod
-    def _context(session: SessionModel, user: UserModel) -> AuthContext:
+    def _context(self, db: Session, session: SessionModel, user: UserModel) -> AuthContext:
+        role = UserRole(user.role)
+        if role is UserRole.ADMIN:
+            menus = frozenset(ALL_MENU_KEYS)
+        else:
+            menus = frozenset(
+                db.scalars(
+                    select(UserMenuGrantModel.menu_key).where(UserMenuGrantModel.user_id == user.id)
+                )
+            )
         return AuthContext(
             session_id=session.id,
             user_id=user.id,
             username=user.username,
             display_name=user.display_name,
-            role=UserRole(user.role),
+            role=role,
             must_change_password=user.must_change_password,
             csrf_token=session.csrf_secret.decode("ascii"),
             reauthenticated_at=session.reauthenticated_at,
+            menus=menus,
         )
 
     def _rate_keys(self, username_normalized: str, client_ip: str) -> tuple[bytes, bytes]:

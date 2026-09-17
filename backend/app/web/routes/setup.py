@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
+from app.domain.identity import ordered_menu_keys
 from app.web.decorators import require_preauth_csrf, request_security, services
 from app.web.http import ensure_session_transport, json_body, session_response
 
@@ -50,6 +51,7 @@ def initialize():
                 "displayName": issued.context.display_name,
                 "role": issued.context.role.value,
                 "mustChangePassword": issued.context.must_change_password,
+                "menuKeys": ordered_menu_keys(issued.context.menus),
             },
         },
         status=201,

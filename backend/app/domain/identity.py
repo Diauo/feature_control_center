@@ -2,12 +2,31 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Iterable
 from enum import StrEnum
 
 
 class UserRole(StrEnum):
     ADMIN = "admin"
     OPERATOR = "operator"
+
+
+class MenuKey(StrEnum):
+    WORKSPACE = "workspace"
+    RUNS = "runs"
+    SCHEDULES = "schedules"
+    FEATURE_ADMIN = "feature_admin"
+    USERS = "users"
+    CUSTOMERS = "customers"
+    AUDIT = "audit"
+    SETTINGS = "settings"
+
+
+ALL_MENU_KEYS: tuple[str, ...] = tuple(key.value for key in MenuKey)
+GRANTABLE_MENU_KEYS: tuple[str, ...] = tuple(
+    key.value for key in MenuKey if key is not MenuKey.SETTINGS
+)
+DEFAULT_OPERATOR_MENUS: tuple[str, ...] = (MenuKey.WORKSPACE.value, MenuKey.RUNS.value)
 
 
 class ValidationError(ValueError):
@@ -57,4 +76,23 @@ def parse_role(value: str) -> UserRole:
         return UserRole(value)
     except ValueError as exc:
         raise ValidationError("INVALID_ROLE", "用户角色无效", field="role") from exc
+
+
+def clean_menu_keys(value: object) -> list[str]:
+    if not isinstance(value, (list, tuple)):
+        raise ValidationError("INVALID_MENU_KEYS", "菜单权限格式无效", field="menuKeys")
+    unique: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or item not in GRANTABLE_MENU_KEYS:
+            raise ValidationError("INVALID_MENU_KEYS", "菜单权限包含不支持的菜单", field="menuKeys")
+        if item not in unique:
+            unique.append(item)
+    if not unique:
+        raise ValidationError("INVALID_MENU_KEYS", "业务员至少需要一个菜单权限", field="menuKeys")
+    return unique
+
+
+def ordered_menu_keys(keys: Iterable[str]) -> list[str]:
+    selected = set(keys)
+    return [key for key in ALL_MENU_KEYS if key in selected]
 

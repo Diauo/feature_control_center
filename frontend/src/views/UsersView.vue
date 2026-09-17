@@ -7,7 +7,7 @@ import PaginationBar from '@/components/PaginationBar.vue'
 import { ApiError, apiRequest } from '@/lib/api'
 import { notify } from '@/lib/notify'
 import { useSessionStore } from '@/stores/session'
-import type { Customer, Paginated, Pagination, UserRole, UserSummary } from '@/types'
+import type { Customer, MenuKey, Paginated, Pagination, UserRole, UserSummary } from '@/types'
 
 interface UserForm {
   username: string
@@ -15,6 +15,7 @@ interface UserForm {
   role: UserRole
   isActive: boolean
   customerIds: string[]
+  menuKeys: MenuKey[]
 }
 
 const session = useSessionStore()
@@ -43,6 +44,7 @@ const emptyForm = (): UserForm => ({
   role: 'operator',
   isActive: true,
   customerIds: [],
+  menuKeys: ['workspace', 'runs'],
 })
 const form = ref<UserForm>(emptyForm())
 const editingUser = computed(() => users.value.find((user) => user.id === editingId.value) ?? null)
@@ -51,6 +53,16 @@ const roleTabs = computed(() => [
   { value: 'operator', label: '业务用户', count: activeRole.value === 'operator' ? pagination.value.total : undefined },
   { value: 'admin', label: '系统管理员', count: activeRole.value === 'admin' ? pagination.value.total : undefined },
 ])
+const menuCatalog: Array<{ key: MenuKey; label: string }> = [
+  { key: 'workspace', label: '工作台' },
+  { key: 'runs', label: '运行记录' },
+  { key: 'schedules', label: '定时任务' },
+  { key: 'feature_admin', label: '功能管理' },
+  { key: 'users', label: '用户管理' },
+  { key: 'customers', label: '客户管理' },
+  { key: 'audit', label: '安全审计' },
+]
+const menuLabels = new Map<MenuKey, string>(menuCatalog.map((item) => [item.key, item.label]))
 
 onMounted(load)
 
@@ -96,6 +108,7 @@ function openEdit(user: UserSummary): void {
     role: user.role,
     isActive: user.isActive ?? true,
     customerIds: [...(user.customerIds ?? [])],
+    menuKeys: [...(user.menuKeys ?? [])],
   }
   editOpen.value = true
 }
@@ -111,6 +124,7 @@ async function createUser(): Promise<void> {
           displayName: form.value.displayName,
           role: form.value.role,
           customerIds: form.value.role === 'operator' ? form.value.customerIds : [],
+          menuKeys: form.value.role === 'operator' ? form.value.menuKeys : [],
         }),
       })
       temporaryPassword.value = result.temporaryPassword
@@ -138,6 +152,7 @@ async function saveUser(): Promise<void> {
           role: form.value.role,
           isActive: form.value.isActive,
           customerIds: form.value.role === 'operator' ? form.value.customerIds : [],
+          menuKeys: form.value.role === 'operator' ? form.value.menuKeys : [],
         }),
       })
       replaceUser(result.user)
@@ -259,6 +274,11 @@ function customerNames(user: UserSummary): string {
   return names.join('、') || '未分配客户'
 }
 
+function menuNames(user: UserSummary): string {
+  const keys = user.menuKeys ?? []
+  return keys.map((key) => menuLabels.get(key) ?? key).join('、') || '未授权'
+}
+
 function formatTime(value?: number | null): string {
   return value ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeStyle: 'short' }).format(value * 1000) : '从未登录'
 }
@@ -273,7 +293,7 @@ function readableError(error: unknown, fallback: string): string {
     <div class="page-heading">
       <div>
         <h1>用户管理</h1>
-        <p>业务操作员按客户授权；系统管理员单独管理并拥有全部客户权限。</p>
+        <p>业务操作员按客户与菜单授权；系统管理员拥有全部权限。</p>
       </div>
       <button class="primary-button" type="button" @click="openCreate">{{ activeRole === 'admin' ? '添加系统管理员' : '添加业务用户' }}</button>
     </div>
@@ -287,11 +307,12 @@ function readableError(error: unknown, fallback: string): string {
       <div v-else-if="visibleUsers.length === 0" class="empty-table">{{ activeRole === 'admin' ? '尚无其他系统管理员。' : '尚未创建业务用户。' }}</div>
       <div v-else class="table-scroll">
         <table>
-          <thead><tr><th>用户</th><th v-if="activeRole === 'operator'">客户范围</th><th>最近登录</th><th>状态</th><th class="align-right">操作</th></tr></thead>
+          <thead><tr><th>用户</th><th v-if="activeRole === 'operator'">客户范围</th><th v-if="activeRole === 'operator'">菜单权限</th><th>最近登录</th><th>状态</th><th class="align-right">操作</th></tr></thead>
           <tbody>
             <tr v-for="user in visibleUsers" :key="user.id">
               <td><div class="identity-cell"><span class="mini-avatar">{{ user.displayName.slice(0, 1) }}</span><span><strong>{{ user.displayName }}</strong><small>@{{ user.username }}</small></span></div></td>
               <td v-if="activeRole === 'operator'" class="muted-cell">{{ customerNames(user) }}</td>
+              <td v-if="activeRole === 'operator'" class="muted-cell">{{ menuNames(user) }}</td>
               <td class="muted-cell">{{ formatTime(user.lastLoginAt) }}</td>
               <td><span class="status-pill" :class="user.isActive === false ? 'status-pill--off' : 'status-pill--on'">{{ user.isActive === false ? '已停用' : '正常' }}</span></td>
               <td><div class="row-actions"><button class="text-button" type="button" @click="openEdit(user)">编辑</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="resetPassword(user)">重置密码</button><button v-if="user.id !== session.user?.id" class="text-button" type="button" :disabled="busy" @click="revokeSessions(user)">退出会话</button></div></td>
@@ -308,9 +329,10 @@ function readableError(error: unknown, fallback: string): string {
         <label class="field"><span>用户名</span><input v-model.trim="form.username" autocomplete="off" minlength="3" maxlength="64" required /></label>
         <label class="field"><span>显示名称</span><input v-model.trim="form.displayName" maxlength="64" required /></label>
         <div class="field"><span>账号类型</span><div class="readonly-field">{{ form.role === 'admin' ? '系统管理员' : '业务操作员' }}</div></div>
+        <div v-if="form.role === 'operator'" class="field field--wide"><span>菜单权限</span><div class="check-grid"><label v-for="item in menuCatalog" :key="item.key" class="check-item"><input v-model="form.menuKeys" type="checkbox" :value="item.key" /><span>{{ item.label }}</span></label><small>「系统设置」仅管理员可用，业务员至少勾选一项。</small></div></div>
         <div v-if="form.role === 'operator'" class="field field--wide"><span>可管理客户</span><div class="check-grid"><label v-for="customer in customers.filter((item) => item.isActive)" :key="customer.id" class="check-item"><input v-model="form.customerIds" type="checkbox" :value="customer.id" /><span>{{ customer.name }}</span></label><small v-if="customers.filter((item) => item.isActive).length === 0">请先创建客户。</small></div></div><p v-if="errorMessage" class="form-error field--wide" role="alert">{{ errorMessage }}</p>
       </form>
-      <template #footer><button class="secondary-button" type="button" @click="createOpen = false">取消</button><button class="primary-button" type="submit" form="create-user-form" :disabled="busy">{{ busy ? '正在创建…' : '创建用户' }}</button></template>
+      <template #footer><button class="secondary-button" type="button" @click="createOpen = false">取消</button><button class="primary-button" type="submit" form="create-user-form" :disabled="busy || (form.role === 'operator' && form.menuKeys.length === 0)">{{ busy ? '正在创建…' : '创建用户' }}</button></template>
     </ModalDialog>
 
     <ModalDialog :open="editOpen" title="编辑用户" :description="editingUser ? `正在编辑 @${editingUser.username}` : ''" @close="editOpen = false">
@@ -319,9 +341,10 @@ function readableError(error: unknown, fallback: string): string {
         <label class="field"><span>显示名称</span><input v-model.trim="form.displayName" maxlength="64" required /></label>
         <div class="field"><span>账号类型</span><div class="readonly-field">{{ form.role === 'admin' ? '系统管理员' : '业务操作员' }}</div></div>
         <label class="field toggle-field"><span><strong>允许登录</strong><small>停用后该用户的现有会话会立即失效。</small></span><input v-model="form.isActive" class="switch" type="checkbox" :disabled="editingId === session.user?.id" /></label>
+        <div v-if="form.role === 'operator'" class="field field--wide"><span>菜单权限</span><div class="check-grid"><label v-for="item in menuCatalog" :key="item.key" class="check-item"><input v-model="form.menuKeys" type="checkbox" :value="item.key" /><span>{{ item.label }}</span></label><small>「系统设置」仅管理员可用，业务员至少勾选一项。</small></div></div>
         <div v-if="form.role === 'operator'" class="field field--wide"><span>可管理客户</span><div class="check-grid"><label v-for="customer in customers.filter((item) => item.isActive)" :key="customer.id" class="check-item"><input v-model="form.customerIds" type="checkbox" :value="customer.id" /><span>{{ customer.name }}</span></label></div></div><p v-if="errorMessage" class="form-error field--wide" role="alert">{{ errorMessage }}</p>
       </form>
-      <template #footer><button class="secondary-button" type="button" @click="editOpen = false">取消</button><button class="primary-button" type="submit" form="edit-user-form" :disabled="busy">{{ busy ? '正在保存…' : '保存修改' }}</button></template>
+      <template #footer><button class="secondary-button" type="button" @click="editOpen = false">取消</button><button class="primary-button" type="submit" form="edit-user-form" :disabled="busy || (form.role === 'operator' && form.menuKeys.length === 0)">{{ busy ? '正在保存…' : '保存修改' }}</button></template>
     </ModalDialog>
 
     <ModalDialog :open="reauthOpen" title="验证管理员身份" description="这是敏感操作，请输入当前登录账号的密码。" :closeable="!busy" width="small" @close="cancelReauthentication">

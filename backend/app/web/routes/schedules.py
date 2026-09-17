@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, g, jsonify, request
 
 from app.application.errors import ApplicationError
-from app.web.decorators import request_security, require_auth, require_session_csrf, services
+from app.web.decorators import request_security, require_menu, require_session_csrf, services
 from app.web.http import json_body, pagination_args, pagination_payload
 
 
@@ -11,7 +11,7 @@ blueprint = Blueprint("schedules", __name__)
 
 
 @blueprint.get("/api/schedules")
-@require_auth()
+@require_menu("schedules")
 def list_schedules():
     scope = request.args.get("scope", "customer").strip().lower()
     customer_id = request.args.get("customerId", "").strip() or None
@@ -28,7 +28,7 @@ def list_schedules():
 
 
 @blueprint.post("/api/schedules")
-@require_auth()
+@require_menu("schedules")
 @require_session_csrf
 def create_schedule():
     body = json_body()
@@ -48,7 +48,7 @@ def create_schedule():
 
 
 @blueprint.put("/api/schedules/<task_id>")
-@require_auth()
+@require_menu("schedules")
 @require_session_csrf
 def update_schedule(task_id: str):
     body = json_body()
@@ -67,7 +67,7 @@ def update_schedule(task_id: str):
 
 
 @blueprint.delete("/api/schedules/<task_id>")
-@require_auth()
+@require_menu("schedules")
 @require_session_csrf
 def delete_schedule(task_id: str):
     services().schedules.delete(

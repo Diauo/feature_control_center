@@ -2,10 +2,12 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 
 import { apiRequest } from '@/lib/api'
+import { notify } from '@/lib/notify'
 import { useSessionStore } from '@/stores/session'
-import type { CustomerFeature } from '@/types'
+import type { CustomerFeature, MenuKey } from '@/types'
 import HomeView from '@/views/HomeView.vue'
 
 vi.mock('@/lib/api', () => ({
@@ -43,64 +45,97 @@ const feature: CustomerFeature = {
   updatedAt: 1_800_000_000,
 }
 
+function mockLoadOnly() {
+  vi.mocked(apiRequest).mockImplementation((async (url: string) => {
+    if (url.startsWith('/api/customer-features?')) {
+      return {
+        items: [feature],
+        pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      }
+    }
+    throw new Error(`Unexpected request: ${url}`)
+  }) as typeof apiRequest)
+}
+
+function mockLoadAndRun() {
+  vi.mocked(apiRequest).mockImplementation((async (url: string, init?: RequestInit) => {
+    if (url.startsWith('/api/customer-features?')) {
+      return {
+        items: [feature],
+        pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      }
+    }
+    if (url.endsWith('/runs') && init?.method === 'POST') {
+      return { run: { requestId: 'run-1' } }
+    }
+    throw new Error(`Unexpected request: ${url}`)
+  }) as typeof apiRequest)
+}
+
+async function mountHome(menuKeys: MenuKey[], routes: RouteRecordRaw[] = [{ path: '/', component: HomeView }]) {
+  const pinia = createPinia()
+  const session = useSessionStore(pinia)
+  session.user = {
+    id: 'user-1',
+    username: 'user',
+    displayName: '用户',
+    role: 'operator',
+    mustChangePassword: false,
+    menuKeys,
+  }
+  session.customers = [{
+    id: 'customer-1',
+    name: '客户 A',
+    description: '测试客户',
+    isActive: true,
+    createdAt: 1_800_000_000,
+    updatedAt: 1_800_000_000,
+  }]
+  session.currentCustomerId = 'customer-1'
+  session.customerScopeMode = 'customer'
+  const router = createRouter({ history: createMemoryHistory(), routes })
+  await router.push('/')
+  await router.isReady()
+  const wrapper = mount(HomeView, { global: { plugins: [pinia, router] } })
+  await flushPromises()
+  return { wrapper, router }
+}
+
 afterEach(() => {
   vi.clearAllMocks()
   document.body.innerHTML = ''
 })
 
-describe('HomeView feature upload entry', () => {
-  it('places the generic upload action in the registered-feature summary card', async () => {
-    vi.mocked(apiRequest).mockImplementation((async (url: string) => {
-      if (url.startsWith('/api/customer-features?')) {
-        return {
-          items: [feature],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-        }
-      }
-      if (url === '/api/admin/settings') {
-        return { values: { 'feature.allowed_package_formats': ['zip', 'rar'] } }
-      }
-      throw new Error(`Unexpected request: ${url}`)
-    }) as typeof apiRequest)
-    const pinia = createPinia()
-    const session = useSessionStore(pinia)
-    session.user = {
-      id: 'admin-1',
-      username: 'admin',
-      displayName: '管理员',
-      role: 'admin',
-      mustChangePassword: false,
-    }
-    session.customers = [{
-      id: 'customer-1',
-      name: '客户 A',
-      description: '测试客户',
-      isActive: true,
-      createdAt: 1_800_000_000,
-      updatedAt: 1_800_000_000,
-    }]
-    session.currentCustomerId = 'customer-1'
-    session.customerScopeMode = 'customer'
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [{ path: '/', component: HomeView }],
-    })
-    await router.push('/')
-    await router.isReady()
-    const wrapper = mount(HomeView, { global: { plugins: [pinia, router] } })
+describe('HomeView 职责边界', () => {
+  it('不再提供上传功能包与配置管理入口', async () => {
+    mockLoadOnly()
+    const { wrapper } = await mountHome(['workspace', 'runs'])
+    expect(wrapper.find('.metric-card__action').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('上传功能包')
+    expect(wrapper.find('.feature-actions').text()).not.toContain('配置管理')
+    expect(wrapper.find('.feature-actions').text()).toContain('运行')
+    wrapper.unmount()
+  })
+
+  it('有运行记录菜单时，运行后跳转实时日志', async () => {
+    mockLoadAndRun()
+    const { wrapper, router } = await mountHome(['workspace', 'runs'], [
+      { path: '/', component: HomeView },
+      { path: '/runs/:requestId', component: { template: '<div>run</div>' } },
+    ])
+    await wrapper.get('.feature-actions .primary-button').trigger('click')
     await flushPromises()
+    expect(router.currentRoute.value.path).toBe('/runs/run-1')
+    wrapper.unmount()
+  })
 
-    expect(wrapper.find('.feature-actions').text()).not.toContain('上传功能包')
-    expect(wrapper.find('.feature-actions').text()).toContain('配置管理')
-    const uploadButton = wrapper.get('.metric-card--primary .metric-card__action')
-    expect(uploadButton.text()).toBe('上传功能包')
-
-    await uploadButton.trigger('click')
+  it('没有运行记录菜单时，运行后不跳转仅提示', async () => {
+    mockLoadAndRun()
+    const { wrapper, router } = await mountHome(['workspace'])
+    await wrapper.get('.feature-actions .primary-button').trigger('click')
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/')
-    expect(document.body.textContent).toContain('上传功能包')
-    expect(document.body.textContent).toContain('客户 A')
-
+    expect(vi.mocked(notify.success)).toHaveBeenCalled()
     wrapper.unmount()
   })
 })

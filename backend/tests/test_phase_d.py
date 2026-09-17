@@ -260,6 +260,7 @@ def test_schedule_crud_is_available_to_linked_operator(client, app, tmp_path):
             "username": "scheduler-operator",
             "displayName": "调度操作员",
             "role": "operator",
+            "menuKeys": ["workspace", "runs", "schedules"],
             "customerIds": [customer["id"]],
         },
     ).get_json()

@@ -17,6 +17,13 @@ def test_report_limit_migration_preserves_existing_details(tmp_path: Path) -> No
             );
             INSERT INTO alembic_version (version_num) VALUES ('0009_run_reports');
 
+            CREATE TABLE user (
+                id VARCHAR(32) NOT NULL PRIMARY KEY,
+                role VARCHAR(16) NOT NULL
+            );
+            INSERT INTO user (id, role) VALUES ('operator-user-0001', 'operator');
+            INSERT INTO user (id, role) VALUES ('admin-user-0002', 'admin');
+
             CREATE TABLE run (
                 request_id VARCHAR(32) NOT NULL PRIMARY KEY
             );
@@ -89,8 +96,14 @@ def test_report_limit_migration_preserves_existing_details(tmp_path: Path) -> No
 
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == (
-            "0010_report_limit",
+            "0011_menu_grants",
         )
+        assert connection.execute(
+            "SELECT menu_key FROM user_menu_grant WHERE user_id = 'operator-user-0001' ORDER BY menu_key"
+        ).fetchall() == [("runs",), ("schedules",), ("workspace",)]
+        assert connection.execute(
+            "SELECT COUNT(*) FROM user_menu_grant WHERE user_id = 'admin-user-0002'"
+        ).fetchone() == (0,)
         assert connection.execute(
             "SELECT id, sequence, status, values_json FROM run_report_item"
         ).fetchone() == (7, 1, "SUCCESS", '{"recordId":"R-001"}')

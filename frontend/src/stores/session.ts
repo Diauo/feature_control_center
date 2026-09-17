@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import { apiRequest, clearCsrfToken, refreshCsrfToken, setCsrfToken } from '@/lib/api'
-import type { Customer, SessionPayload, UserSummary } from '@/types'
+import type { Customer, MenuKey, SessionPayload, UserSummary } from '@/types'
 
 const CUSTOMER_STORAGE_KEY = 'fcc:last-customer-id'
 const CUSTOMER_SCOPE_STORAGE_KEY = 'fcc:customer-scope'
@@ -19,6 +19,9 @@ export const useSessionStore = defineStore('session', () => {
 
   const isAuthenticated = computed(() => user.value !== null)
   const isAdmin = computed(() => user.value?.role === 'admin')
+  function hasMenu(key: MenuKey): boolean {
+    return user.value?.menuKeys?.includes(key) ?? false
+  }
   const currentCustomer = computed(
     () => customers.value.find((customer) => customer.id === currentCustomerId.value) ?? null,
   )
@@ -171,6 +174,7 @@ export const useSessionStore = defineStore('session', () => {
     startupError,
     isAuthenticated,
     isAdmin,
+    hasMenu,
     currentCustomer,
     selectedCustomerScopeValue,
     isAllCustomers,

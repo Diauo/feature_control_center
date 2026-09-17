@@ -1,4 +1,5 @@
 export type UserRole = 'admin' | 'operator'
+export type MenuKey = 'workspace' | 'runs' | 'schedules' | 'feature_admin' | 'users' | 'customers' | 'audit' | 'settings'
 
 export interface UserSummary {
   id: string
@@ -8,6 +9,7 @@ export interface UserSummary {
   isActive?: boolean
   mustChangePassword: boolean
   customerIds?: string[]
+  menuKeys?: MenuKey[]
   createdAt?: number
   lastLoginAt?: number | null
 }

@@ -185,7 +185,7 @@ class SystemOperationsService:
         try:
             return importlib.metadata.version("feature-control-center")
         except importlib.metadata.PackageNotFoundError:
-            return "2.1.2"
+            return "2.2.0"
 
     @staticmethod
     def _server_timezone() -> str:
