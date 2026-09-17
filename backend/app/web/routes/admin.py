@@ -6,8 +6,8 @@ from app.application.auth import AuthContext
 from app.application.errors import ApplicationError
 from app.web.decorators import (
     request_security,
-    require_admin,
     require_management_network,
+    require_menu,
     require_session_csrf,
     services,
 )
@@ -18,7 +18,7 @@ blueprint = Blueprint("admin", __name__, url_prefix="/api/admin")
 
 
 @blueprint.get("/users")
-@require_admin
+@require_menu("users")
 @require_management_network
 def list_users():
     page, page_size = pagination_args()
@@ -29,7 +29,7 @@ def list_users():
 
 
 @blueprint.post("/users")
-@require_admin
+@require_menu("users")
 @require_management_network
 @require_session_csrf
 def create_user():
@@ -39,6 +39,7 @@ def create_user():
         username=str(body.get("username", "")),
         display_name=str(body.get("displayName", "")),
         role=str(body.get("role", "operator")),
+        menu_keys=body["menuKeys"] if "menuKeys" in body else None,
         customer_ids=_string_list(body.get("customerIds", [])),
         request=request_security().metadata(request),
     )
@@ -46,7 +47,7 @@ def create_user():
 
 
 @blueprint.patch("/users/<user_id>")
-@require_admin
+@require_menu("users")
 @require_management_network
 @require_session_csrf
 def update_user(user_id: str):
@@ -63,13 +64,14 @@ def update_user(user_id: str):
         role=role,
         is_active=is_active,
         customer_ids=customer_ids,
+        menu_keys=body["menuKeys"] if "menuKeys" in body else None,
         request=request_security().metadata(request),
     )
     return jsonify({"user": user})
 
 
 @blueprint.put("/users/<user_id>/customers")
-@require_admin
+@require_menu("users")
 @require_management_network
 @require_session_csrf
 def set_user_customers(user_id: str):
@@ -84,7 +86,7 @@ def set_user_customers(user_id: str):
 
 
 @blueprint.post("/users/<user_id>/reset-password")
-@require_admin
+@require_menu("users")
 @require_management_network
 @require_session_csrf
 def reset_password(user_id: str):
@@ -97,7 +99,7 @@ def reset_password(user_id: str):
 
 
 @blueprint.post("/users/<user_id>/revoke-sessions")
-@require_admin
+@require_menu("users")
 @require_management_network
 @require_session_csrf
 def revoke_sessions(user_id: str):
@@ -113,7 +115,7 @@ def revoke_sessions(user_id: str):
 
 
 @blueprint.get("/customers")
-@require_admin
+@require_menu("customers")
 @require_management_network
 def list_customers():
     page, page_size = pagination_args()
@@ -122,7 +124,7 @@ def list_customers():
 
 
 @blueprint.post("/customers")
-@require_admin
+@require_menu("customers")
 @require_management_network
 @require_session_csrf
 def create_customer():
@@ -137,7 +139,7 @@ def create_customer():
 
 
 @blueprint.patch("/customers/<customer_id>")
-@require_admin
+@require_menu("customers")
 @require_management_network
 @require_session_csrf
 def update_customer(customer_id: str):
@@ -158,7 +160,7 @@ def update_customer(customer_id: str):
 
 
 @blueprint.get("/audit-logs")
-@require_admin
+@require_menu("audit")
 @require_management_network
 def list_audit_logs():
     page, page_size = pagination_args()

@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, Response, g, jsonify, request
 
 from app.application.auth import AuthContext
+from app.domain.identity import ordered_menu_keys
 from app.web.decorators import (
     optional_auth,
     request_security,
@@ -45,6 +46,7 @@ def login():
                 "displayName": issued.context.display_name,
                 "role": issued.context.role.value,
                 "mustChangePassword": issued.context.must_change_password,
+                "menuKeys": ordered_menu_keys(issued.context.menus),
             }
         },
     )
@@ -104,6 +106,7 @@ def me():
                 "displayName": context.display_name,
                 "role": context.role.value,
                 "mustChangePassword": context.must_change_password,
+                "menuKeys": ordered_menu_keys(context.menus),
             },
             "customers": customers,
             "csrfToken": context.csrf_token,

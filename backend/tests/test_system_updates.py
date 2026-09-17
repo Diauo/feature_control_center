@@ -168,7 +168,7 @@ def test_update_overview_and_default_rar_setting(client, tmp_path: Path):
 
     overview = client.get("/api/admin/system/updates")
     assert overview.status_code == 200
-    assert overview.get_json()["currentVersion"] == "2.1.2"
+    assert overview.get_json()["currentVersion"] == "2.2.0"
     assert overview.get_json()["supervisor"]["available"] is False
     assert overview.get_json()["items"] == []
     assert overview.get_json()["pagination"]["total"] == 0
@@ -261,8 +261,8 @@ def test_failed_update_retry_creates_a_new_record_and_preserves_history(client, 
             SystemUpdateModel(
                 id=source_id,
                 operation="APPLY",
-                source_version="2.1.2",
-                target_version="2.1.3",
+                source_version=services.system_updates.version_provider(),
+                target_version="2.2.1",
                 package_filename="release.fcup",
                 package_sha256=digest,
                 package_size=len(package),

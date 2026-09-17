@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: feature-control-center:2.1.2
+    image: feature-control-center:2.2.0
     container_name: feature-control-center
     restart: unless-stopped
     ports:
@@ -20,6 +20,8 @@ services:
       - CHOWN
       - DAC_OVERRIDE
       - FOWNER
+      # FSETID：目录 setgid 位依赖此能力（系统日志按组共享给 web 用户读取）
+      - FSETID
       - KILL
       - SETGID
       - SETUID

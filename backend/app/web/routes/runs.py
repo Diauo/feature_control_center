@@ -7,7 +7,7 @@ import time
 from flask import Blueprint, Response, g, jsonify, request, send_file, stream_with_context
 
 from app.application.errors import ApplicationError
-from app.web.decorators import current_token, request_security, require_auth, require_session_csrf, services
+from app.web.decorators import current_token, request_security, require_menu, require_session_csrf, services
 from app.web.http import pagination_args, pagination_payload
 
 
@@ -15,7 +15,7 @@ blueprint = Blueprint("runs", __name__)
 
 
 @blueprint.post("/api/customer-features/<feature_id>/runs")
-@require_auth()
+@require_menu("workspace")
 @require_session_csrf
 def create_run(feature_id: str):
     run = services().runs.create_manual_run(
@@ -27,7 +27,7 @@ def create_run(feature_id: str):
 
 
 @blueprint.post("/api/runs/<request_id>/stop")
-@require_auth()
+@require_menu("runs")
 @require_session_csrf
 def stop_run(request_id: str):
     run = services().runs.request_stop(
@@ -39,7 +39,7 @@ def stop_run(request_id: str):
 
 
 @blueprint.get("/api/runs")
-@require_auth()
+@require_menu("runs")
 def list_runs():
     scope = request.args.get("scope", "customer").strip().lower()
     customer_id = request.args.get("customerId", "").strip() or None
@@ -67,13 +67,13 @@ def list_runs():
 
 
 @blueprint.get("/api/runs/<request_id>")
-@require_auth()
+@require_menu("runs")
 def get_run(request_id: str):
     return jsonify({"run": services().runs.get_run(g.auth, request_id)})
 
 
 @blueprint.get("/api/runs/<request_id>/events")
-@require_auth()
+@require_menu("runs")
 def get_events(request_id: str):
     try:
         after = int(request.args.get("after", "0"))
@@ -84,13 +84,13 @@ def get_events(request_id: str):
 
 
 @blueprint.get("/api/runs/<request_id>/report")
-@require_auth()
+@require_menu("runs")
 def get_report(request_id: str):
     return jsonify({"report": services().runs.get_report(g.auth, request_id)})
 
 
 @blueprint.get("/api/runs/<request_id>/report/items")
-@require_auth()
+@require_menu("runs")
 def get_report_items(request_id: str):
     page, page_size = pagination_args()
     items, total = services().runs.list_report_items(
@@ -104,7 +104,7 @@ def get_report_items(request_id: str):
 
 
 @blueprint.get("/api/runs/<request_id>/events/stream")
-@require_auth()
+@require_menu("runs")
 def stream_events(request_id: str):
     actor = g.auth
     session_token = current_token()
@@ -168,7 +168,7 @@ def stream_events(request_id: str):
 
 
 @blueprint.get("/api/runs/<request_id>/log.<output_format>")
-@require_auth()
+@require_menu("runs")
 def download_log(request_id: str, output_format: str):
     filename, content, mimetype = services().runs.render_log(
         g.auth, request_id, output_format, request_security().metadata(request)
@@ -185,7 +185,7 @@ def download_log(request_id: str, output_format: str):
 
 
 @blueprint.get("/api/runs/<request_id>/report.xlsx")
-@require_auth()
+@require_menu("runs")
 def download_report(request_id: str):
     filename, content, mimetype = services().runs.render_report(
         g.auth,

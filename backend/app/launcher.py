@@ -15,7 +15,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.infrastructure.paths import AppPaths
-from app.infrastructure.runtime_permissions import prepare_root_directory, prepare_runs_root, repair_runtime_cache
+from app.infrastructure.runtime_permissions import (
+    ensure_log_files_readable,
+    prepare_root_directory,
+    prepare_runs_root,
+    repair_runtime_cache,
+)
 from app.infrastructure.system_logging import configure_system_logging
 from app.update_supervisor import (
     ReleaseDescriptor,
@@ -92,6 +97,7 @@ def _prepare_permissions(paths: AppPaths, web_uid: int, web_gid: int) -> None:
         directory.mkdir(exist_ok=True)
         os.chown(directory, web_uid, web_gid)
         os.chmod(directory, 0o2770)
+        ensure_log_files_readable(directory, web_gid)
 
     paths.updates_dir.mkdir(exist_ok=True)
     os.chown(paths.updates_dir, 0, web_gid)

@@ -47,6 +47,12 @@ class UserModel(Base):
         foreign_keys="UserCustomerModel.user_id",
         lazy="selectin",
     )
+    menu_grants: Mapped[list[UserMenuGrantModel]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="UserMenuGrantModel.user_id",
+        lazy="selectin",
+    )
 
 
 class CustomerModel(Base):
@@ -89,6 +95,30 @@ class UserCustomerModel(Base):
         foreign_keys=[user_id],
     )
     customer: Mapped[CustomerModel] = relationship(back_populates="user_links")
+
+
+class UserMenuGrantModel(Base):
+    __tablename__ = "user_menu_grant"
+    __table_args__ = (
+        CheckConstraint(
+            "menu_key IN ('workspace', 'runs', 'schedules', 'feature_admin', 'users', 'customers', 'audit', 'settings')",
+            name="ck_user_menu_grant_key",
+        ),
+    )
+
+    user_id: Mapped[str] = mapped_column(
+        String(32),
+        ForeignKey("user.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    menu_key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    created_by: Mapped[str | None] = mapped_column(String(32), ForeignKey("user.id", ondelete="SET NULL"))
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    user: Mapped[UserModel] = relationship(
+        back_populates="menu_grants",
+        foreign_keys=[user_id],
+    )
 
 
 class SessionModel(Base):

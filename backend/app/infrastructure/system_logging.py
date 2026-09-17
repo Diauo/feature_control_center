@@ -24,6 +24,21 @@ def _safe_text(value: object, limit: int) -> str:
     return text[:limit]
 
 
+def _ensure_group_access(descriptor: int, directory: Path) -> None:
+    """根进程写出的日志归组到所在目录的属组，保证 web 服务可读（尽力而为）。
+
+    目录 setgid 正常时新文件本就会继承目录属组；此处的即时修正用于目录 setgid
+    失效或历史遗留文件的场景，失败不阻断日志写入（由启动自愈兜底）。
+    """
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
+        return
+    try:
+        os.fchown(descriptor, -1, directory.stat().st_gid)
+        os.fchmod(descriptor, 0o660)
+    except OSError:
+        pass
+
+
 class DailyJsonLogHandler(logging.Handler):
     """Append one bounded JSON object per line and rotate by UTC calendar day."""
 
@@ -53,6 +68,7 @@ class DailyJsonLogHandler(logging.Handler):
             destination = self.root / f"{now:%Y-%m-%d}.jsonl"
             with self._write_lock:
                 descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o660)
+                _ensure_group_access(descriptor, self.root)
                 with os.fdopen(descriptor, "a", encoding="utf-8", newline="\n") as handle:
                     handle.write(line)
         except Exception:

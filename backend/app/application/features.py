@@ -18,7 +18,7 @@ from app.application.auth import AuthContext, AuthService
 from app.application.errors import ApplicationError, AuthorizationError, ConflictError
 from app.application.settings import SettingsService
 from app.domain.feature_metadata import validate_config_value
-from app.domain.identity import UserRole, ValidationError
+from app.domain.identity import MenuKey, UserRole, ValidationError
 from app.domain.time import Clock
 from app.infrastructure.database import Database
 from app.infrastructure.models import (
@@ -81,7 +81,7 @@ class FeatureService:
         content: bytes,
         request: RequestMetadata,
     ) -> dict[str, Any]:
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         self.auth.require_recent_auth(actor)
         try:
             package = self.inspector.inspect(
@@ -252,7 +252,7 @@ class FeatureService:
         return {"version": self.get_version(version_id), "activatedForCustomer": activated}
 
     def retry_prepare(self, *, actor: AuthContext, version_id: str, request: RequestMetadata) -> dict[str, Any]:
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         self.auth.require_recent_auth(actor)
         with self.database.session() as db:
             version = db.scalar(select(FeatureVersionModel).where(
@@ -362,7 +362,7 @@ class FeatureService:
         request: RequestMetadata,
     ) -> list[dict[str, Any]]:
         """Share immutable code while creating customer-owned defaults and data-source rows."""
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         self.auth.require_recent_auth(actor)
         unique_targets = list(dict.fromkeys(item.strip() for item in target_customer_ids if item.strip()))
         if not unique_targets:
@@ -560,7 +560,7 @@ class FeatureService:
         max_runtime_seconds: int | None | object = _UNSET,
         request: RequestMetadata,
     ) -> dict[str, Any]:
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         self.auth.require_recent_auth(actor)
         if enabled is not None and not isinstance(enabled, bool):
             raise ConflictError("INVALID_ENABLED", "启用状态必须是布尔值")
@@ -586,7 +586,7 @@ class FeatureService:
             return self._customer_feature_dict(db, feature)
 
     def activate_version(self, *, actor: AuthContext, customer_feature_id: str, version_id: str, use_default_data_source: bool, request: RequestMetadata) -> dict[str, Any]:
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         self.auth.require_recent_auth(actor)
         now = self.clock.now()
         with self.database.session() as db:
@@ -650,7 +650,7 @@ class FeatureService:
         customer_feature_id: str,
         request: RequestMetadata | None = None,
     ) -> dict[str, Any]:
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         with self.database.session() as db:
             feature = self._require_customer_feature(db, actor, customer_feature_id)
             version = db.get(FeatureVersionModel, feature.feature_version_id)
@@ -688,7 +688,7 @@ class FeatureService:
             }
 
     def update_config(self, *, actor: AuthContext, customer_feature_id: str, values: dict[str, Any], clear_secrets: list[str], request: RequestMetadata) -> dict[str, Any]:
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         self.auth.require_recent_auth(actor)
         now = self.clock.now()
         with self.database.session() as db:
@@ -799,7 +799,7 @@ class FeatureService:
     def download_default_data_source(
         self, actor: AuthContext, version_id: str, request: RequestMetadata | None = None
     ) -> DownloadedFile:
-        self._require_admin(actor)
+        self._require_menu(actor, MenuKey.FEATURE_ADMIN)
         with self.database.session() as db:
             row = db.scalar(select(FeatureVersionDefaultDataSourceModel).options(undefer(FeatureVersionDefaultDataSourceModel.content)).where(
                 FeatureVersionDefaultDataSourceModel.feature_version_id == version_id
@@ -933,9 +933,9 @@ class FeatureService:
         return feature
 
     @staticmethod
-    def _require_admin(actor: AuthContext) -> None:
-        if actor.role is not UserRole.ADMIN:
-            raise AuthorizationError("ADMIN_REQUIRED", "需要系统管理员权限", status=403)
+    def _require_menu(actor: AuthContext, *menu_keys: str) -> None:
+        if not actor.has_menu(*menu_keys):
+            raise AuthorizationError("MENU_PERMISSION_REQUIRED", "当前账号没有访问该菜单的权限", status=403)
 
     def _customer_feature_dict(
         self, db: Any, feature: CustomerFeatureModel, *, customer_name: str | None = None

@@ -7,9 +7,8 @@ from flask import Blueprint, g, jsonify, request, send_file
 from app.application.errors import ApplicationError
 from app.web.decorators import (
     request_security,
-    require_admin,
-    require_auth,
     require_management_network,
+    require_menu,
     require_session_csrf,
     services,
 )
@@ -20,13 +19,13 @@ blueprint = Blueprint("features", __name__)
 
 
 @blueprint.get("/api/customers/<customer_id>/features")
-@require_auth()
+@require_menu("workspace", "runs", "schedules", "feature_admin")
 def list_customer_features(customer_id: str):
     return jsonify({"items": services().features.list_customer_features(g.auth, customer_id)})
 
 
 @blueprint.get("/api/customer-features")
-@require_auth()
+@require_menu("workspace", "runs", "schedules", "feature_admin")
 def list_scoped_customer_features():
     page, page_size = pagination_args()
     scope = request.args.get("scope", "customer").strip().lower()
@@ -45,13 +44,13 @@ def list_scoped_customer_features():
 
 
 @blueprint.get("/api/customer-features/<feature_id>/data-source")
-@require_auth()
+@require_menu("workspace")
 def data_source_metadata(feature_id: str):
     return jsonify(services().features.data_source_metadata(g.auth, feature_id))
 
 
 @blueprint.put("/api/customer-features/<feature_id>/data-source")
-@require_auth()
+@require_menu("workspace")
 @require_session_csrf
 def replace_data_source(feature_id: str):
     upload = request.files.get("file")
@@ -70,7 +69,7 @@ def replace_data_source(feature_id: str):
 
 
 @blueprint.get("/api/customer-features/<feature_id>/data-source/download")
-@require_auth()
+@require_menu("workspace")
 def download_data_source(feature_id: str):
     item = services().features.download_data_source(
         g.auth, feature_id, request_security().metadata(request)
@@ -79,7 +78,7 @@ def download_data_source(feature_id: str):
 
 
 @blueprint.get("/api/customer-features/<feature_id>/config")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 def get_config(feature_id: str):
     return jsonify(
@@ -88,7 +87,7 @@ def get_config(feature_id: str):
 
 
 @blueprint.put("/api/customer-features/<feature_id>/config")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 @require_session_csrf
 def update_config(feature_id: str):
@@ -107,7 +106,7 @@ def update_config(feature_id: str):
 
 
 @blueprint.get("/api/admin/feature-definitions")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 def list_definitions():
     page, page_size = pagination_args()
@@ -116,7 +115,7 @@ def list_definitions():
 
 
 @blueprint.post("/api/admin/features/versions")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 @require_session_csrf
 def upload_version():
@@ -137,7 +136,7 @@ def upload_version():
 
 
 @blueprint.post("/api/admin/feature-versions/<version_id>/prepare")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 @require_session_csrf
 def retry_prepare(version_id: str):
@@ -149,7 +148,7 @@ def retry_prepare(version_id: str):
 
 
 @blueprint.get("/api/admin/feature-versions/<version_id>/default-data-source/download")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 def download_default_data_source(version_id: str):
     return _download(
@@ -160,7 +159,7 @@ def download_default_data_source(version_id: str):
 
 
 @blueprint.post("/api/admin/customer-features/<feature_id>/activate-version")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 @require_session_csrf
 def activate_version(feature_id: str):
@@ -175,7 +174,7 @@ def activate_version(feature_id: str):
 
 
 @blueprint.post("/api/admin/customer-features/<feature_id>/copy")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 @require_session_csrf
 def copy_customer_feature(feature_id: str):
@@ -194,7 +193,7 @@ def copy_customer_feature(feature_id: str):
 
 
 @blueprint.patch("/api/admin/customer-features/<feature_id>")
-@require_admin
+@require_menu("feature_admin")
 @require_management_network
 @require_session_csrf
 def update_customer_feature(feature_id: str):

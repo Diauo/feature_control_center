@@ -72,6 +72,21 @@ def require_admin(function: F) -> F:
     return cast(F, wrapped)
 
 
+def require_menu(*menu_keys: str) -> Callable[[F], F]:
+    def decorator(function: F) -> F:
+        @wraps(function)
+        @require_auth()
+        def wrapped(*args: Any, **kwargs: Any):
+            context = cast(AuthContext, g.auth)
+            if not context.has_menu(*menu_keys):
+                raise AuthorizationError("MENU_PERMISSION_REQUIRED", "当前账号没有访问该菜单的权限", status=403)
+            return function(*args, **kwargs)
+
+        return cast(F, wrapped)
+
+    return decorator
+
+
 def require_management_network(function: F) -> F:
     @wraps(function)
     def wrapped(*args: Any, **kwargs: Any):

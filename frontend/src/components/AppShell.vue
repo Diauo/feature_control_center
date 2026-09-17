@@ -32,16 +32,17 @@ const customerOptions = computed(() => [
   { value: '__all__', label: '全部客户', description: `查看有权访问的 ${session.customers.length} 个客户` },
   ...session.customers.map((customer) => ({ value: customer.id, label: customer.name })),
 ])
-const navItems = computed(() => [
-  { label: '工作台', path: '/', visible: true, icon: LayoutDashboard },
-  { label: '运行记录', path: '/runs', visible: true, icon: History },
-  { label: '定时任务', path: '/schedules', visible: true, icon: CalendarClock },
-  { label: '功能管理', path: '/admin/features', visible: session.isAdmin, icon: LibraryBig },
-  { label: '用户管理', path: '/admin/users', visible: session.isAdmin, icon: Users },
-  { label: '客户管理', path: '/admin/customers', visible: session.isAdmin, icon: Building2 },
-  { label: '安全审计', path: '/admin/audit', visible: session.isAdmin, icon: ShieldCheck },
-  { label: '系统设置', path: '/admin/settings', visible: session.isAdmin, icon: Settings },
-])
+const navCatalog = [
+  { label: '工作台', path: '/', menu: 'workspace', icon: LayoutDashboard },
+  { label: '运行记录', path: '/runs', menu: 'runs', icon: History },
+  { label: '定时任务', path: '/schedules', menu: 'schedules', icon: CalendarClock },
+  { label: '功能管理', path: '/admin/features', menu: 'feature_admin', icon: LibraryBig },
+  { label: '用户管理', path: '/admin/users', menu: 'users', icon: Users },
+  { label: '客户管理', path: '/admin/customers', menu: 'customers', icon: Building2 },
+  { label: '安全审计', path: '/admin/audit', menu: 'audit', icon: ShieldCheck },
+  { label: '系统设置', path: '/admin/settings', menu: 'settings', icon: Settings },
+] as const
+const navItems = computed(() => navCatalog.filter((item) => session.hasMenu(item.menu)))
 
 async function signOut(): Promise<void> {
   await session.logout()
@@ -89,7 +90,7 @@ onBeforeUnmount(() => window.clearTimeout(transitionTimer))
         </div>
 
         <nav class="navigation" aria-label="主导航">
-          <TooltipRoot v-for="item in navItems.filter((entry) => entry.visible)" :key="item.path" :open="openTooltipKey === item.path" @update:open="updateTooltip(item.path, $event)">
+          <TooltipRoot v-for="item in navItems" :key="item.path" :open="openTooltipKey === item.path" @update:open="updateTooltip(item.path, $event)">
             <TooltipTrigger as-child>
               <button
                 class="nav-item"

@@ -14,15 +14,20 @@ from app.application.audit import RequestMetadata, add_audit
 from app.application.auth import AuthContext, AuthService
 from app.application.errors import AuthorizationError, ConflictError
 from app.domain.identity import (
+    ALL_MENU_KEYS,
+    DEFAULT_OPERATOR_MENUS,
+    MenuKey,
     UserRole,
     clean_customer_name,
     clean_display_name,
+    clean_menu_keys,
     normalize_username,
+    ordered_menu_keys,
     parse_role,
 )
 from app.domain.time import Clock
 from app.infrastructure.database import Database
-from app.infrastructure.models import AuditLogModel, CustomerModel, SessionModel, UserCustomerModel, UserModel
+from app.infrastructure.models import AuditLogModel, CustomerModel, SessionModel, UserCustomerModel, UserMenuGrantModel, UserModel
 from app.security.crypto import generate_temporary_password
 from app.security.passwords import PasswordService
 
@@ -57,7 +62,7 @@ class IdentityService:
     def list_users(
         self, actor: AuthContext, *, page: int = 1, page_size: int = 20, role: str = ""
     ) -> tuple[list[dict[str, Any]], int]:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.USERS)
         if role not in {"", "admin", "operator"}:
             raise ConflictError("INVALID_USER_ROLE_FILTER", "用户类型筛选值无效")
         with self.database.session() as db:
@@ -69,7 +74,7 @@ class IdentityService:
             total = int(db.scalar(count_statement) or 0)
             users = db.scalars(
                 statement
-                .options(selectinload(UserModel.customer_links))
+                .options(selectinload(UserModel.customer_links), selectinload(UserModel.menu_grants))
                 .order_by(UserModel.created_at)
                 .offset((page - 1) * page_size)
                 .limit(page_size)
@@ -83,15 +88,20 @@ class IdentityService:
         username: str,
         display_name: str,
         role: str,
+        menu_keys: list[str] | None = None,
         customer_ids: list[str],
         request: RequestMetadata,
     ) -> CreatedUser:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.USERS)
         self.auth.require_recent_auth(actor)
         normalized_username = normalize_username(username)
         clean_username = unicodedata.normalize("NFKC", username).strip()
         clean_name = clean_display_name(display_name)
         clean_role = parse_role(role)
+        if clean_role is UserRole.OPERATOR:
+            effective_menus = clean_menu_keys(menu_keys) if menu_keys is not None else list(DEFAULT_OPERATOR_MENUS)
+        else:
+            effective_menus = []
         unique_customer_ids = list(dict.fromkeys(customer_ids))
         temp_password = generate_temporary_password()
         now = self.clock.now()
@@ -120,6 +130,14 @@ class IdentityService:
                             created_at=now,
                         )
                     )
+                for menu_key in effective_menus:
+                    user.menu_grants.append(
+                        UserMenuGrantModel(
+                            menu_key=menu_key,
+                            created_by=actor.user_id,
+                            created_at=now,
+                        )
+                    )
                 db.add(user)
                 db.flush()
                 add_audit(
@@ -132,7 +150,7 @@ class IdentityService:
                     session_id=actor.session_id,
                     target_type="user",
                     target_id=user.id,
-                    details={"role": clean_role.value, "customerCount": len(customers)},
+                    details={"role": clean_role.value, "customerCount": len(customers), "menus": effective_menus},
                 )
                 return CreatedUser(user=self._user_dict(user), temporary_password=temp_password)
         except IntegrityError as exc:
@@ -147,9 +165,10 @@ class IdentityService:
         role: str | None,
         is_active: bool | None,
         customer_ids: list[str] | None,
+        menu_keys: list[str] | None = None,
         request: RequestMetadata,
     ) -> dict[str, Any]:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.USERS)
         self.auth.require_recent_auth(actor)
         now = self.clock.now()
         with self.database.session() as db:
@@ -158,6 +177,12 @@ class IdentityService:
                 raise ConflictError("USER_NOT_FOUND", "用户不存在", status=404)
             new_role = parse_role(role).value if role is not None else user.role
             new_active = is_active if is_active is not None else user.is_active
+            effective_menus: list[str] | None = None
+            if new_role == UserRole.OPERATOR:
+                if menu_keys is not None:
+                    effective_menus = clean_menu_keys(menu_keys)
+                elif not user.menu_grants:
+                    effective_menus = list(DEFAULT_OPERATOR_MENUS)
             if user.id == actor.user_id and (new_role != "admin" or not new_active):
                 raise ConflictError("CANNOT_DISABLE_SELF", "不能停用或降级当前登录管理员", status=409)
             if user.role == "admin" and user.is_active and (new_role != "admin" or not new_active):
@@ -186,6 +211,9 @@ class IdentityService:
             if customers is not None:
                 self._replace_customer_links(user, customers, actor.user_id, now)
                 db.flush()
+            if effective_menus is not None:
+                self._replace_menu_grants(user, effective_menus, actor.user_id, now)
+                db.flush()
             add_audit(
                 db,
                 now=now,
@@ -200,6 +228,7 @@ class IdentityService:
                     "role": user.role,
                     "isActive": user.is_active,
                     "customerCount": len(user.customer_links),
+                    "menus": ordered_menu_keys(grant.menu_key for grant in user.menu_grants),
                 },
             )
             return self._user_dict(user)
@@ -212,7 +241,7 @@ class IdentityService:
         customer_ids: list[str],
         request: RequestMetadata,
     ) -> dict[str, Any]:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.USERS)
         self.auth.require_recent_auth(actor)
         now = self.clock.now()
         unique_customer_ids = list(dict.fromkeys(customer_ids))
@@ -244,7 +273,7 @@ class IdentityService:
         user_id: str,
         request: RequestMetadata,
     ) -> str:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.USERS)
         self.auth.require_recent_auth(actor)
         if user_id == actor.user_id:
             raise ConflictError("USE_CHANGE_PASSWORD", "请通过个人密码修改入口更新当前账号密码", status=409)
@@ -274,7 +303,7 @@ class IdentityService:
             return temp_password
 
     def list_customers(self, actor: AuthContext, *, page: int = 1, page_size: int = 20) -> tuple[list[dict[str, Any]], int]:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.CUSTOMERS)
         with self.database.session() as db:
             total = int(db.scalar(select(func.count(CustomerModel.id))) or 0)
             customers = db.scalars(
@@ -293,7 +322,7 @@ class IdentityService:
         description: str,
         request: RequestMetadata,
     ) -> dict[str, Any]:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.CUSTOMERS)
         self.auth.require_recent_auth(actor)
         clean_name = clean_customer_name(name)
         clean_description = description.strip()
@@ -338,7 +367,7 @@ class IdentityService:
         is_active: bool | None,
         request: RequestMetadata,
     ) -> dict[str, Any]:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.CUSTOMERS)
         self.auth.require_recent_auth(actor)
         now = self.clock.now()
         try:
@@ -386,7 +415,7 @@ class IdentityService:
         occurred_from: int | None = None,
         occurred_to: int | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
-        self._ensure_admin(actor)
+        self._ensure_menu(actor, MenuKey.AUDIT)
         if category not in {"ALL", "ADMIN", "OPERATOR", "AUTH_SYSTEM", "LEGACY"}:
             raise ConflictError("INVALID_AUDIT_CATEGORY", "审计分类筛选值无效")
         statement = select(AuditLogModel, UserModel.display_name).outerjoin(
@@ -449,9 +478,9 @@ class IdentityService:
             return items, total
 
     @staticmethod
-    def _ensure_admin(actor: AuthContext) -> None:
-        if actor.role is not UserRole.ADMIN:
-            raise AuthorizationError("ADMIN_REQUIRED", "需要系统管理员权限", status=403)
+    def _ensure_menu(actor: AuthContext, *menu_keys: str) -> None:
+        if not actor.has_menu(*menu_keys):
+            raise AuthorizationError("MENU_PERMISSION_REQUIRED", "当前账号没有访问该菜单的权限", status=403)
 
     @staticmethod
     def _require_customers(db: Any, customer_ids: list[str]) -> list[CustomerModel]:
@@ -502,8 +531,34 @@ class IdentityService:
                 )
 
     @staticmethod
+    def _replace_menu_grants(
+        user: UserModel,
+        menu_keys: list[str],
+        actor_user_id: str,
+        now: int,
+    ) -> None:
+        desired = set(menu_keys)
+        existing = {grant.menu_key for grant in user.menu_grants}
+        for grant in list(user.menu_grants):
+            if grant.menu_key not in desired:
+                user.menu_grants.remove(grant)
+        for menu_key in menu_keys:
+            if menu_key not in existing:
+                user.menu_grants.append(
+                    UserMenuGrantModel(
+                        menu_key=menu_key,
+                        created_by=actor_user_id,
+                        created_at=now,
+                    )
+                )
+
+    @staticmethod
     def _user_dict(user: UserModel) -> dict[str, Any]:
         customer_ids = sorted(link.customer_id for link in user.customer_links)
+        if user.role == UserRole.ADMIN:
+            menu_keys = list(ALL_MENU_KEYS)
+        else:
+            menu_keys = ordered_menu_keys(grant.menu_key for grant in user.menu_grants)
         return {
             "id": user.id,
             "username": user.username,
@@ -512,6 +567,7 @@ class IdentityService:
             "isActive": user.is_active,
             "mustChangePassword": user.must_change_password,
             "customerIds": customer_ids,
+            "menuKeys": menu_keys,
             "createdAt": user.created_at,
             "lastLoginAt": user.last_login_at,
         }

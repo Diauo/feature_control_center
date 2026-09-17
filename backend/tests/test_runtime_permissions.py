@@ -11,6 +11,7 @@ import pytest
 from app.infrastructure import runtime_permissions
 from app.infrastructure.runtime_permissions import (
     RuntimePermissionError,
+    ensure_log_files_readable,
     prepare_runs_root,
     publish_runtime_environment,
     repair_runtime_cache,
@@ -78,6 +79,29 @@ def test_runtime_repair_keeps_wheel_cache_private(tmp_path: Path, monkeypatch):
     assert (runtime_cache / "environments", 0o710) in modes
     assert (runtime_cache / "wheels", 0o700) in modes
     assert (wheel_file, 0o600) in modes
+
+
+def test_system_log_files_are_group_readable_for_web(tmp_path: Path, monkeypatch):
+    directory = tmp_path / "system-logs" / "runner"
+    directory.mkdir(parents=True)
+    log_file = directory / "2026-09-17.jsonl"
+    log_file.write_text("{}\n", encoding="utf-8")
+    notes = directory / "notes.txt"
+    notes.write_text("ignore", encoding="utf-8")
+
+    owners: list[tuple[Path, int, int, bool]] = []
+    modes: list[tuple[Path, int]] = []
+    monkeypatch.setattr(
+        runtime_permissions,
+        "_chown",
+        lambda path, uid, gid, follow_symlinks=True: owners.append((path, uid, gid, follow_symlinks)),
+    )
+    monkeypatch.setattr(runtime_permissions, "_chmod", lambda path, mode: modes.append((path, mode)))
+
+    ensure_log_files_readable(directory, 10001)
+
+    assert owners == [(log_file, -1, 10001, True)]
+    assert modes == [(log_file, 0o660)]
 
 
 def test_runs_root_allows_traversal_without_write_access(tmp_path: Path, monkeypatch):
