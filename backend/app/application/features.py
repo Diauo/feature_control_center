@@ -647,7 +647,7 @@ class FeatureService:
     ) -> dict[str, Any]:
         """软删除功能登记：保留登记行与版本记录（历史运行可查），清空客户侧配置与数据源。"""
         self._require_menu(actor, MenuKey.FEATURE_ADMIN)
-        self.auth.require_recent_auth(actor)
+        self.auth.require_recent_auth(actor, max_age_seconds=120)  # 高危操作：要求刚刚验证过密码
         now = self.clock.now()
         with self.database.session() as db:
             feature = self._require_customer_feature(db, actor, customer_feature_id)

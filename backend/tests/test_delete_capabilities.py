@@ -38,15 +38,30 @@ def test_feature_soft_delete_keeps_history_and_restore_reuses_registration(clien
     revision_id = feature["dataSource"]["id"]
     run_id = _fake_finished_run(app, customer, feature, data_source_revision_id=revision_id)
 
+    scheduled = client.post(
+        "/api/schedules",
+        headers={"X-CSRF-Token": csrf},
+        json={
+            "customerId": customer["id"],
+            "customerFeatureId": feature["id"],
+            "name": "删除联动任务",
+            "cronExpression": "0 9 * * *",
+            "isEnabled": True,
+        },
+    )
+    assert scheduled.status_code == 201, scheduled.get_json()
+
     deleted = client.delete(f"/api/admin/customer-features/{feature['id']}", headers={"X-CSRF-Token": csrf})
     assert deleted.status_code == 200, deleted.get_json()
     body = deleted.get_json()
     assert body["deleted"] is True
     assert body["configCount"] >= 1
+    assert body["scheduleCount"] == 1
     assert body["revisionBlanked"] == 1 and body["revisionPurged"] == 0
 
-    # 功能列表不可见，运行历史仍可查
+    # 功能列表不可见；定时任务已删除；运行历史仍可查
     assert client.get(f"/api/customers/{customer['id']}/features").get_json()["items"] == []
+    assert client.get(f"/api/schedules?scope=customer&customerId={customer['id']}").get_json()["items"] == []
     runs = client.get(f"/api/runs?scope=customer&customerId={customer['id']}").get_json()["items"]
     assert [item["requestId"] for item in runs] == [run_id]
     assert client.get(f"/api/runs/{run_id}").status_code == 200
@@ -68,6 +83,8 @@ def test_feature_soft_delete_keeps_history_and_restore_reuses_registration(clien
     assert items[0]["dataSource"]["revisionNumber"] == 2
     runs_after = client.get(f"/api/runs?scope=customer&customerId={customer['id']}").get_json()["items"]
     assert [item["requestId"] for item in runs_after] == [run_id]
+    # 恢复不等于恢复定时任务：需要重新配置
+    assert client.get(f"/api/schedules?scope=customer&customerId={customer['id']}").get_json()["items"] == []
 
 
 def test_feature_delete_blocked_by_active_run_and_run_creation(client, app, tmp_path: Path):

@@ -311,7 +311,7 @@ class IdentityService:
     ) -> dict[str, Any]:
         """硬删除业务员账号：管理员不可删除，历史审计保留账号快照。"""
         self._ensure_menu(actor, MenuKey.USERS)
-        self.auth.require_recent_auth(actor)
+        self.auth.require_recent_auth(actor, max_age_seconds=120)  # 高危操作：要求刚刚验证过密码
         if user_id == actor.user_id:
             raise ConflictError("CANNOT_DELETE_SELF", "不能删除当前登录账号", status=409)
         now = self.clock.now()

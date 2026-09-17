@@ -611,6 +611,15 @@ p {
   font-size: 12px;
 }
 
+.secondary-button--danger {
+  border-color: rgba(215, 0, 21, 0.3);
+  color: var(--danger);
+}
+
+.secondary-button--danger:hover:not(:disabled) {
+  background: rgba(215, 0, 21, 0.08);
+}
+
 .danger-button {
   background: #d70015;
   color: #fff;
