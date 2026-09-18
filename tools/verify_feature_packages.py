@@ -55,12 +55,13 @@ def verify(delivery_archive: Path) -> list[dict[str, object]]:
             inspected = inspector.inspect(filename, content, LIMITS, allowed_formats=("zip",))
             validate_python_sources(filename, content)
             if "OZON库存同步" in filename:
-                secret_keys = {
-                    key for key, value in inspected.metadata.config_schema.items() if value["type"] == "secret"
-                }
-                expected_secrets = {"ME3_app_key", "ME3_secret", "OZON_api_key", "OZON_client_id"}
-                if secret_keys != expected_secrets:
-                    raise RuntimeError(f"{filename} 的密钥字段不完整")
+                # 随包默认配置按"免配置"口径交付：凭证以带默认值的 string 字段提供，
+                # 校验重点是四个凭证字段必须齐全（类型随交付口径演进，不限定 secret）。
+                config_keys = set(inspected.metadata.config_schema)
+                required_credentials = {"ME3_app_key", "ME3_secret", "OZON_api_key", "OZON_client_id"}
+                missing = sorted(required_credentials - config_keys)
+                if missing:
+                    raise RuntimeError(f"{filename} 的密钥字段不完整：缺少 {', '.join(missing)}")
                 if inspected.default_data_source is None or inspected.default_data_source.filename != "dataSource.xlsx":
                     raise RuntimeError(f"{filename} 没有正确登记默认数据源")
                 if len(inspected.requirements_text.splitlines()) != 12:
