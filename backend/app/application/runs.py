@@ -318,6 +318,55 @@ class RunService:
             result["alreadyFinished"] = already_finished
             return result
 
+    def stop_active_runs(
+        self,
+        *,
+        actor: AuthContext,
+        customer_feature_id: str,
+        request: RequestMetadata,
+    ) -> dict[str, Any]:
+        """工作台急停：请求终止一个客户功能当前所有活动实例（排队/启动中/运行中/停止中）。"""
+        now = self.clock.now()
+        with self.database.session() as db:
+            feature = db.get(CustomerFeatureModel, customer_feature_id)
+            if feature is None:
+                raise ConflictError("CUSTOMER_FEATURE_NOT_FOUND", "客户功能不存在", status=404)
+            self._require_customer_access(db, actor, feature.customer_id, require_active=False)
+            rows = db.scalars(
+                select(RunModel)
+                .where(
+                    RunModel.customer_feature_id == feature.id,
+                    RunModel.status.in_(ACTIVE_RUN_STATUSES),
+                )
+                .order_by(RunModel.queued_at, RunModel.request_id)
+            ).all()
+            stopped: list[dict[str, Any]] = []
+            for run in rows:
+                if run.status != "STOPPING" and run.stop_requested_at is None:
+                    run.stop_requested_at = now
+                    run.stop_reason = "USER_REQUEST"
+                    run.status = "STOPPING"
+                stopped.append({"requestId": run.request_id, "status": run.status})
+            add_audit(
+                db,
+                now=now,
+                request=request,
+                action="run.stop.bulk",
+                outcome="success" if stopped else "ignored",
+                actor_user_id=actor.user_id,
+                session_id=actor.session_id,
+                target_type="customer_feature",
+                target_id=feature.id,
+                details={"count": len(stopped), "requestIds": [item["requestId"] for item in stopped]},
+            )
+            db.flush()
+            return {
+                "count": len(stopped),
+                "runs": stopped,
+                "customerFeatureId": feature.id,
+                "featureName": feature.display_name,
+            }
+
     def list_runs(
         self,
         actor: AuthContext,

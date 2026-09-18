@@ -16,6 +16,7 @@ from sqlalchemy.orm import undefer
 from app.application.audit import RequestMetadata, add_audit
 from app.application.auth import AuthContext, AuthService
 from app.application.errors import ApplicationError, AuthorizationError, ConflictError
+from app.application.runs import ACTIVE_RUN_STATUSES
 from app.application.settings import SettingsService
 from app.domain.feature_metadata import validate_config_value
 from app.domain.identity import MenuKey, UserRole, ValidationError
@@ -654,7 +655,7 @@ class FeatureService:
             active = db.scalar(
                 select(func.count(RunModel.request_id)).where(
                     RunModel.customer_feature_id == feature.id,
-                    RunModel.status.in_(("QUEUED", "STARTING", "RUNNING", "STOPPING")),
+                    RunModel.status.in_(ACTIVE_RUN_STATUSES),
                 )
             )
             if active:
@@ -1159,6 +1160,15 @@ class FeatureService:
         config_values = {row.config_key: row for row in db.scalars(select(FeatureConfigValueModel).where(
             FeatureConfigValueModel.customer_feature_id == feature.id
         ))}
+        active_run = db.scalar(
+            select(RunModel)
+            .where(
+                RunModel.customer_feature_id == feature.id,
+                RunModel.status.in_(ACTIVE_RUN_STATUSES),
+            )
+            .order_by(RunModel.queued_at, RunModel.request_id)
+            .limit(1)
+        )
         return {
             "id": feature.id,
             "customerId": feature.customer_id,
@@ -1174,6 +1184,16 @@ class FeatureService:
             "configurationComplete": self._config_complete(self._config_schema(version), config_values),
             "dataSourceSchema": self._data_schema(version),
             "dataSource": self._revision_dict(revision) if revision else None,
+            "activeRun": (
+                {
+                    "requestId": active_run.request_id,
+                    "status": active_run.status,
+                    "queuedAt": active_run.queued_at,
+                    "startedAt": active_run.started_at,
+                }
+                if active_run is not None
+                else None
+            ),
             "updatedAt": feature.updated_at,
         }
 

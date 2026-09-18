@@ -42,7 +42,13 @@ const feature: CustomerFeature = {
   configurationComplete: true,
   dataSourceSchema: null,
   dataSource: null,
+  activeRun: null,
   updatedAt: 1_800_000_000,
+}
+
+const runningFeature: CustomerFeature = {
+  ...feature,
+  activeRun: { requestId: 'run-9', status: 'RUNNING', queuedAt: 1_800_000_010, startedAt: 1_800_000_012 },
 }
 
 function mockLoadOnly() {
@@ -67,6 +73,21 @@ function mockLoadAndRun() {
     }
     if (url.endsWith('/runs') && init?.method === 'POST') {
       return { run: { requestId: 'run-1' } }
+    }
+    throw new Error(`Unexpected request: ${url}`)
+  }) as typeof apiRequest)
+}
+
+function mockLoadAndStop() {
+  vi.mocked(apiRequest).mockImplementation((async (url: string, init?: RequestInit) => {
+    if (url.startsWith('/api/customer-features?')) {
+      return {
+        items: [runningFeature],
+        pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      }
+    }
+    if (url.endsWith('/runs/stop') && init?.method === 'POST') {
+      return { count: 1, runs: [{ requestId: 'run-9', status: 'STOPPING' }] }
     }
     throw new Error(`Unexpected request: ${url}`)
   }) as typeof apiRequest)
@@ -136,6 +157,36 @@ describe('HomeView 职责边界', () => {
     await flushPromises()
     expect(router.currentRoute.value.path).toBe('/')
     expect(vi.mocked(notify.success)).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('有运行中任务时急停按钮可用，确认后请求停止全部实例', async () => {
+    mockLoadAndStop()
+    const { wrapper } = await mountHome(['workspace'])
+    const stopButton = wrapper.get('.feature-actions .danger-button')
+    expect(stopButton.attributes('disabled')).toBeUndefined()
+    await stopButton.trigger('click')
+    await flushPromises()
+    expect(document.body.textContent).toContain('急停')
+    const confirmButton = Array.from(document.body.querySelectorAll('button')).find((item) =>
+      item.textContent?.includes('确认急停'),
+    )
+    expect(confirmButton).toBeTruthy()
+    confirmButton!.click()
+    await flushPromises()
+    expect(vi.mocked(apiRequest)).toHaveBeenCalledWith(
+      '/api/customer-features/customer-feature-1/runs/stop',
+      { method: 'POST' },
+    )
+    expect(vi.mocked(notify.success)).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('没有运行中任务时急停按钮禁用', async () => {
+    mockLoadOnly()
+    const { wrapper } = await mountHome(['workspace', 'runs'])
+    const stopButton = wrapper.get('.feature-actions .danger-button')
+    expect(stopButton.attributes('disabled')).toBeDefined()
     wrapper.unmount()
   })
 })
