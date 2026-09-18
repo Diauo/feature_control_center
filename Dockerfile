@@ -44,7 +44,7 @@ RUN curl --fail --location --proto '=https' --tlsv1.2 \
 
 FROM python:3.14.4-slim AS runtime
 LABEL org.opencontainers.image.title="Feature Control Center" \
-      org.opencontainers.image.version="2.3.0"
+      org.opencontainers.image.version="2.4.0"
 
 ENV TZ=UTC
 

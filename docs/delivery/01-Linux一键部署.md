@@ -31,8 +31,8 @@ docker info
 ```bash
 mkdir -p /opt/feature-control-center
 cd /opt/feature-control-center
-unzip /交付包所在路径/功能控制中心-2.1.2-交付包.zip
-cd 功能控制中心-2.1.2
+unzip /交付包所在路径/功能控制中心-2.4.0-交付包.zip
+cd 功能控制中心-2.4.0
 chmod +x install.sh manage.sh deployment/*.sh
 sha256sum -c checksums.sha256
 ```
