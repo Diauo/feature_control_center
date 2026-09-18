@@ -620,6 +620,15 @@ p {
   background: rgba(215, 0, 21, 0.08);
 }
 
+.stop-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.stop-summary p {
+  margin: 0;
+}
+
 .danger-button {
   background: #d70015;
   color: #fff;

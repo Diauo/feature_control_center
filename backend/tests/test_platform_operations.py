@@ -83,7 +83,7 @@ def test_system_status_logs_and_audit_snapshots(client, app, tmp_path: Path):
     initialize(client, tmp_path / "data")
     status = client.get("/api/admin/system/status")
     assert status.status_code == 200
-    assert status.get_json()["version"] == "2.3.0"
+    assert status.get_json()["version"] == "2.4.0"
     assert {item["name"] for item in status.get_json()["services"]} == {"web", "runner", "scheduler"}
 
     log_dir = tmp_path / "data" / "system-logs" / "web"

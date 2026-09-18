@@ -79,6 +79,12 @@ export interface CustomerFeature {
   configurationComplete: boolean
   dataSourceSchema: { filename: string; required: boolean; extensions: string[]; description: string } | null
   dataSource: DataSourceInfo | null
+  activeRun: {
+    requestId: string
+    status: 'QUEUED' | 'STARTING' | 'RUNNING' | 'STOPPING'
+    queuedAt: number | null
+    startedAt: number | null
+  } | null
   updatedAt: number
 }
 

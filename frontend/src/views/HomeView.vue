@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
+import ModalDialog from '@/components/ModalDialog.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import { ApiError, apiRequest, downloadFile } from '@/lib/api'
 import { notify } from '@/lib/notify'
@@ -31,6 +32,69 @@ const scopeReady = computed(() => displayedScope.value === (session.isAllCustome
 const statusCopy: Record<CustomerFeature['status'], string> = {
   ACTIVE: '可运行', PREPARING: '准备依赖中', WAITING_DATA_SOURCE: '等待数据源',
   DEPENDENCY_FAILED: '依赖准备失败', DISABLED: '已停用',
+}
+const runStatusCopy: Record<string, string> = {
+  QUEUED: '排队中', STARTING: '启动中', RUNNING: '运行中', STOPPING: '停止中',
+}
+const stopTarget = ref<CustomerFeature | null>(null)
+const stopBusy = ref(false)
+const stopError = ref('')
+const stopRefreshTimers: number[] = []
+
+function stopDisabled(feature: CustomerFeature): boolean {
+  return !scopeReady.value || loading.value || busyId.value === feature.id || stopBusy.value
+    || !feature.activeRun || feature.activeRun.status === 'STOPPING'
+}
+
+function stopButtonTitle(feature: CustomerFeature): string {
+  if (!feature.activeRun) return '当前没有运行中的任务'
+  if (feature.activeRun.status === 'STOPPING') return '停止请求已发出，正在等待脚本安全收尾'
+  return '立即停止该功能所有运行中的任务'
+}
+
+function openStop(feature: CustomerFeature): void {
+  stopError.value = ''
+  stopTarget.value = feature
+}
+
+function closeStop(): void {
+  if (stopBusy.value) return
+  stopTarget.value = null
+}
+
+function scheduleStopRefresh(): void {
+  stopRefreshTimers.forEach((timer) => window.clearTimeout(timer))
+  stopRefreshTimers.length = 0
+  for (const delay of [2500, 12000, 20000]) {
+    stopRefreshTimers.push(window.setTimeout(() => { void load() }, delay))
+  }
+}
+
+async function confirmStop(): Promise<void> {
+  const feature = stopTarget.value
+  if (!feature) return
+  stopBusy.value = true
+  stopError.value = ''
+  try {
+    const result = await apiRequest<{ count: number }>(
+      `/api/customer-features/${feature.id}/runs/stop`,
+      { method: 'POST' },
+    )
+    stopTarget.value = null
+    if (result.count > 0) {
+      notify.success(`已请求停止 ${result.count} 个任务`, {
+        description: `${feature.customerName} · ${feature.name} · 脚本正在安全收尾`,
+      })
+    } else {
+      notify.success('当前没有运行中的任务', { description: `${feature.customerName} · ${feature.name}` })
+    }
+    await load()
+    scheduleStopRefresh()
+  } catch (reason) {
+    stopError.value = reason instanceof ApiError ? reason.message : '停止请求失败，请稍后重试'
+  } finally {
+    stopBusy.value = false
+  }
 }
 
 async function load(): Promise<void> {
@@ -123,6 +187,10 @@ watch([() => session.currentCustomerId, () => session.customerScopeMode], () => 
   void load()
 }, { immediate: true })
 
+onBeforeUnmount(() => {
+  stopRefreshTimers.forEach((timer) => window.clearTimeout(timer))
+})
+
 </script>
 
 <template>
@@ -147,6 +215,7 @@ watch([() => session.currentCustomerId, () => session.customerScopeMode], () => 
             <dl class="feature-facts"><div><dt>配置</dt><dd>{{ feature.configurationComplete ? '已完整设置' : '仍有必填项未设置' }}</dd></div><div><dt>数据源</dt><dd v-if="feature.dataSource">{{ feature.dataSource.filename }} · 第 {{ feature.dataSource.revisionNumber }} 版 · {{ formatBytes(feature.dataSource.size) }}</dd><dd v-else>{{ feature.dataSourceSchema ? '尚未上传' : '此功能不使用数据源' }}</dd></div></dl>
             <div class="feature-actions">
               <button class="primary-button" type="button" :disabled="!scopeReady || loading || busyId === feature.id || feature.status !== 'ACTIVE' || !feature.configurationComplete" @click="startRun(feature)">{{ busyId === feature.id ? '正在创建…' : '运行' }}</button>
+              <button class="danger-button" type="button" :disabled="stopDisabled(feature)" :title="stopButtonTitle(feature)" @click="openStop(feature)">{{ feature.activeRun?.status === 'STOPPING' ? '停止中…' : '急停' }}</button>
               <button v-if="feature.dataSource" class="secondary-button" type="button" :disabled="!scopeReady || loading" @click="downloadDataSource(feature)">下载数据源</button>
               <label v-if="feature.dataSourceSchema" class="secondary-button upload-button" :class="{ 'upload-button--disabled': !scopeReady || loading || busyId === feature.id }">{{ busyId === feature.id ? '上传中…' : '替换数据源' }}<input type="file" :accept="feature.dataSourceSchema.extensions.join(',')" :disabled="!scopeReady || loading || busyId === feature.id" @change="replaceDataSource(feature, $event)" /></label>
             </div>
@@ -156,5 +225,17 @@ watch([() => session.currentCustomerId, () => session.customerScopeMode], () => 
     </div>
     <PaginationBar v-if="pagination.total > 20" :pagination="pagination" :disabled="loading" @change="changePage" />
 
+    <ModalDialog :open="Boolean(stopTarget)" title="急停：停止运行中的任务" description="将立即请求停止该功能当前所有运行中的任务实例；已处理的数据会正常落盘，未完成的部分可稍后重新运行。" width="small" :closeable="!stopBusy" @close="closeStop">
+      <div v-if="stopTarget" class="stop-summary">
+        <p><strong>{{ stopTarget.customerName }} · {{ stopTarget.name }}</strong></p>
+        <p v-if="stopTarget.activeRun">运行中任务：{{ stopTarget.activeRun.requestId }}（{{ runStatusCopy[stopTarget.activeRun.status] ?? stopTarget.activeRun.status }}）</p>
+        <p v-else>当前没有运行中的任务。</p>
+      </div>
+      <p v-if="stopError" class="form-error">{{ stopError }}</p>
+      <template #footer>
+        <button class="secondary-button" type="button" :disabled="stopBusy" @click="closeStop">取消</button>
+        <button class="danger-button" type="button" :disabled="stopBusy" @click="confirmStop">{{ stopBusy ? '正在停止…' : '确认急停' }}</button>
+      </template>
+    </ModalDialog>
   </section>
 </template>

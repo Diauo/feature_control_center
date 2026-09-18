@@ -38,6 +38,18 @@ def stop_run(request_id: str):
     return jsonify({"run": run})
 
 
+@blueprint.post("/api/customer-features/<feature_id>/runs/stop")
+@require_menu("workspace")
+@require_session_csrf
+def stop_feature_runs(feature_id: str):
+    result = services().runs.stop_active_runs(
+        actor=g.auth,
+        customer_feature_id=feature_id,
+        request=request_security().metadata(request),
+    )
+    return jsonify(result)
+
+
 @blueprint.get("/api/runs")
 @require_menu("runs")
 def list_runs():
